@@ -9,7 +9,7 @@ async function connectDB() {
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
     console.error(`Error connecting to MongoDB: ${error.message}`);
-    process.exit(1);
+    console.warn('⚠️ Warning: Express backend will continue running, but database features will be unavailable until connection is established.');
   }
 }
 
