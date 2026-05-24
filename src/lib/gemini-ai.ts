@@ -2,7 +2,7 @@
 import { GoogleGenAI } from '@google/genai';
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyC5Hl1YYhs99b0Ms0fNtzR1_gRTxCoF-Iw';
-const MODEL_NAME = import.meta.env.VITE_GEMINI_MODEL || "gemini-1.5-flash";
+const MODEL_NAME = import.meta.env.VITE_GEMINI_MODEL || "gemini-2.5-flash";
 
 const ai = new GoogleGenAI({ 
   apiKey: GEMINI_API_KEY 
