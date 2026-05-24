@@ -1,6 +1,10 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 
+const API_BASE = import.meta.env.PROD
+  ? (import.meta.env.VITE_API_BASE_URL && !import.meta.env.VITE_API_BASE_URL.includes('localhost') ? import.meta.env.VITE_API_BASE_URL : '')
+  : (import.meta.env.VITE_API_BASE_URL || '');
+
 type WaterEntry = {
   id: string;
   date: string;
@@ -77,7 +81,7 @@ export function WaterProvider({ children }: { children: React.ReactNode }) {
     const token = localStorage.getItem('omomo_auth_token');
     if (token && isAuthenticated) {
       const today = new Date().toISOString().split('T')[0];
-      fetch('/api/stats', {
+      fetch(`${API_BASE}/api/stats`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ date: today, water: todayWater })

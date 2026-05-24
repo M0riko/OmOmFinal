@@ -12,6 +12,10 @@ import { toast } from "sonner";
 import { PasswordStrengthIndicator } from "@/components/PasswordStrengthIndicator";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
 
+const API_BASE = import.meta.env.PROD
+  ? (import.meta.env.VITE_API_BASE_URL && !import.meta.env.VITE_API_BASE_URL.includes('localhost') ? import.meta.env.VITE_API_BASE_URL : '')
+  : (import.meta.env.VITE_API_BASE_URL || '');
+
 export default function AuthPage() {
   const { t } = useI18n();
   const { login, register, completeRegistration, loginWithGoogle, user, isAuthenticated, updateUser } = useAuth();
@@ -196,7 +200,7 @@ export default function AuthPage() {
       // Persist age/weight/height to backend
       const token = localStorage.getItem('omomo_auth_token');
       if (token) {
-        fetch('/api/user/me', {
+        fetch(`${API_BASE}/api/user/me`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({

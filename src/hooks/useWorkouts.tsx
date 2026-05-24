@@ -1,4 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+
+const API_BASE = import.meta.env.PROD
+  ? (import.meta.env.VITE_API_BASE_URL && !import.meta.env.VITE_API_BASE_URL.includes('localhost') ? import.meta.env.VITE_API_BASE_URL : '')
+  : (import.meta.env.VITE_API_BASE_URL || '');
 import { 
   Exercise, 
   WorkoutProgram, 
@@ -102,7 +106,7 @@ export function useWorkouts() {
       // Fetch from backend API to get cross-device workout history
       const token = localStorage.getItem('omomo_auth_token');
       if (token) {
-        fetch('/api/stats', {
+        fetch(`${API_BASE}/api/stats`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
         .then(res => res.json())
@@ -363,7 +367,7 @@ export function useWorkouts() {
     // Sync workout to backend
     const token = localStorage.getItem('omomo_auth_token');
     if (token && isAuthenticated) {
-      fetch('/api/workout', {
+      fetch(`${API_BASE}/api/workout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ 

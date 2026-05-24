@@ -2,6 +2,10 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useAchievements } from "@/hooks/useAchievements";
 import { useAuth } from "@/hooks/useAuth";
 
+const API_BASE = import.meta.env.PROD
+  ? (import.meta.env.VITE_API_BASE_URL && !import.meta.env.VITE_API_BASE_URL.includes('localhost') ? import.meta.env.VITE_API_BASE_URL : '')
+  : (import.meta.env.VITE_API_BASE_URL || '');
+
 export type DailyEntry = {
   id: string;
   type: "meal" | "product";
@@ -74,7 +78,7 @@ export function DailyProvider({ children }: { children: React.ReactNode }) {
 
     const token = localStorage.getItem('omomo_auth_token');
     if (token) {
-      fetch('/api/stats', {
+      fetch(`${API_BASE}/api/stats`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       .then(res => res.json())
@@ -154,7 +158,7 @@ export function DailyProvider({ children }: { children: React.ReactNode }) {
     const token = localStorage.getItem('omomo_auth_token');
     if (token && isAuthenticated) {
       const today = new Date().toISOString().split('T')[0];
-      fetch('/api/stats', {
+      fetch(`${API_BASE}/api/stats`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ 

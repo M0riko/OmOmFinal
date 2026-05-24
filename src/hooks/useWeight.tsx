@@ -1,6 +1,10 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 
+const API_BASE = import.meta.env.PROD
+  ? (import.meta.env.VITE_API_BASE_URL && !import.meta.env.VITE_API_BASE_URL.includes('localhost') ? import.meta.env.VITE_API_BASE_URL : '')
+  : (import.meta.env.VITE_API_BASE_URL || '');
+
 type WeightEntry = {
   id: string;
   date: string;
@@ -65,7 +69,7 @@ export function WeightProvider({ children }: { children: React.ReactNode }) {
     if (isAuthenticated && currentWeight !== null) {
       const token = localStorage.getItem('omomo_auth_token');
       if (token) {
-        fetch('/api/user/me', {
+        fetch(`${API_BASE}/api/user/me`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ weight: currentWeight })
