@@ -1,0 +1,9 @@
+# Скопируйте этот файл в .env в корне проекта
+
+# Google OAuth Configuration (для демонстрации)
+VITE_GOOGLE_CLIENT_ID=demo_client_id_123456789
+VITE_GOOGLE_CLIENT_SECRET=demo_client_secret_987654321
+
+# FatSecret API Configuration
+VITE_FATSECRET_CLIENT_ID=64e762751e134d2193adae8b47740c7c
+VITE_FATSECRET_CONSUMER_SECRET=c09fe9f970f94835ba1a355241eecc77

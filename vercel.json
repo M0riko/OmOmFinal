@@ -1,0 +1,39 @@
+{
+  "functions": {
+    "api/fatsecret.js": {
+      "maxDuration": 30
+    },
+    "api/translate.js": {
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/fatsecret",
+      "destination": "/api/fatsecret.js"
+    },
+    {
+      "source": "/api/translate",
+      "destination": "/api/translate.js"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization"
+        }
+      ]
+    }
+  ]
+}
