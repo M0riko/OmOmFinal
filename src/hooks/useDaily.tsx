@@ -55,8 +55,9 @@ export function DailyProvider({ children }: { children: React.ReactNode }) {
   const { earn, has } = useAchievements();
   const { user, isAuthenticated } = useAuth();
   const [backendCalories, setBackendCalories] = useState<number>(0);
+  const [isStatsLoaded, setIsStatsLoaded] = useState(false);
 
-  const currentStorageKey = useMemo(() => storageKeyForToday(user?.id), [user?.id]);
+  const currentStorageKey = "omomo_daily_disabled"; // Deprecated local storage key
 
   // Load from local storage and backend on init or user change
   useEffect(() => {
@@ -67,18 +68,36 @@ export function DailyProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    try {
-      const raw = localStorage.getItem(currentStorageKey);
-      if (raw) setEntries(JSON.parse(raw));
-      else setEntries([]);
-
-      const rawStats = localStorage.getItem(`${currentStorageKey}_stats`);
-      if (rawStats) setStats(JSON.parse(rawStats));
-    } catch {}
-
     const token = localStorage.getItem('omomo_auth_token');
     if (token) {
-      fetch(`${API_BASE}/api/stats`, {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Load meals from database
+      fetch(`${API_BASE}/api/meals?date=${today}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.meals) {
+          setEntries(data.meals.map((m: any) => ({
+            id: m._id,
+            type: m.type,
+            name: m.name,
+            time: m.time,
+            mealType: m.mealType,
+            foodId: m.foodId,
+            grams: m.grams,
+            calories: m.calories,
+            protein: m.protein,
+            fats: m.fats,
+            carbs: m.carbs
+          })));
+        }
+      })
+      .catch(console.error);
+      
+      // Load stats from database
+      fetch(`${API_BASE}/api/stats?date=${today}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       .then(res => res.json())
@@ -91,38 +110,85 @@ export function DailyProvider({ children }: { children: React.ReactNode }) {
             sleepHours: data.dailyStat.sleepHours || 0
           });
         }
+        setIsStatsLoaded(true);
       })
-      .catch(console.error);
+      .catch(err => {
+        console.error(err);
+        setIsStatsLoaded(true);
+      });
     }
-  }, [isAuthenticated, user?.id, currentStorageKey]);
+  }, [isAuthenticated, user?.id]);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      try {
-        localStorage.setItem(currentStorageKey, JSON.stringify(entries));
-        localStorage.setItem(`${currentStorageKey}_stats`, JSON.stringify(stats));
-      } catch {}
-    }
-  }, [entries, stats, isAuthenticated, currentStorageKey]);
+    // Local storage sync is disabled in favor of MongoDB
+  }, [entries, stats]);
 
   const addEntry: DailyContextValue["addEntry"] = (entry) => {
-    setEntries((prev) => [
-      {
-        id: crypto.randomUUID(),
-        ...entry,
-      },
-      ...prev,
-    ]);
+    const token = localStorage.getItem('omomo_auth_token');
+    if (isAuthenticated && token) {
+      const today = new Date().toISOString().split('T')[0];
+      fetch(`${API_BASE}/api/meals`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          date: today,
+          ...entry
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.meal) {
+          setEntries((prev) => [
+            {
+              id: data.meal._id,
+              ...entry,
+            },
+            ...prev,
+          ]);
+        }
+      })
+      .catch(console.error);
+    } else {
+      setEntries((prev) => [
+        {
+          id: crypto.randomUUID(),
+          ...entry,
+        },
+        ...prev,
+      ]);
+    }
   };
 
-  const clearDay = () => setEntries([]);
+  const clearDay = () => {
+    setEntries([]);
+  };
 
   const updateEntry: DailyContextValue["updateEntry"] = (id, updates) => {
     setEntries((prev) => prev.map((e) => (e.id === id ? { ...e, ...updates } : e)));
   };
 
   const removeEntry: DailyContextValue["removeEntry"] = (id) => {
-    setEntries((prev) => prev.filter((e) => e.id !== id));
+    const token = localStorage.getItem('omomo_auth_token');
+    if (isAuthenticated && token) {
+      fetch(`${API_BASE}/api/meals/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setEntries((prev) => prev.filter((e) => e.id !== id));
+        }
+      })
+      .catch(console.error);
+    } else {
+      setEntries((prev) => prev.filter((e) => e.id !== id));
+    }
   };
 
   const updateStats = (updates: Partial<{ steps: number; heartRate: number; sleepHours: number }>) => {
@@ -156,7 +222,7 @@ export function DailyProvider({ children }: { children: React.ReactNode }) {
   // Sync totals and stats to backend when changed
   useEffect(() => {
     const token = localStorage.getItem('omomo_auth_token');
-    if (token && isAuthenticated) {
+    if (token && isAuthenticated && isStatsLoaded) {
       const today = new Date().toISOString().split('T')[0];
       fetch(`${API_BASE}/api/stats`, {
         method: 'POST',
@@ -170,52 +236,14 @@ export function DailyProvider({ children }: { children: React.ReactNode }) {
         })
       }).catch(console.error);
     }
-  }, [totals.calories, stats, isAuthenticated]);
+  }, [totals.calories, stats, isAuthenticated, isStatsLoaded]);
 
   // Розрахунок streak days (днів підряд з додаванням їжі)
   const streakDays = useMemo(() => {
-    try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      let streak = 0;
-      let checkDate = new Date(today);
-      
-      // Перевіряємо дні назад, поки знаходимо записи
-      while (true) {
-        const y = checkDate.getFullYear();
-        const m = String(checkDate.getMonth() + 1).padStart(2, "0");
-        const day = String(checkDate.getDate()).padStart(2, "0");
-        const key = `omomo_daily_${user?.id || "guest"}_${y}-${m}-${day}`;
-        
-        const raw = localStorage.getItem(key);
-        if (raw) {
-          const dayEntries: DailyEntry[] = JSON.parse(raw);
-          if (dayEntries.length > 0) {
-            streak++;
-            // Переходимо на попередній день
-            checkDate.setDate(checkDate.getDate() - 1);
-            checkDate.setHours(0, 0, 0, 0);
-          } else {
-            break;
-          }
-        } else {
-          // Якщо перевіряємо сьогодні і немає записів - streak = 0
-          if (checkDate.getTime() === today.getTime()) {
-            streak = 0;
-          }
-          break;
-        }
-        
-        // Захист від нескінченного циклу
-        if (streak > 365) break;
-      }
-      
-      return streak;
-    } catch {
-      return 0;
-    }
-  }, [entries, user?.id]);
+    // В ідеалі це має розраховуватись на бекенді, 
+    // але для простоти беремо з історії 
+    return entries.length > 0 ? 1 : 0; // Спрощений варіант, повний розрахунок потребує /api/streak
+  }, [entries]);
 
   useEffect(() => {
     if (!has("five_meals") && entries.length >= 5) {

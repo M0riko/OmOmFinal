@@ -1,0 +1,199 @@
+{
+  "User": [
+    {
+      "_id": "tlb4fk6mpwxw9cw",
+      "email": "test@test.com",
+      "password": "$2a$10$KGYRvsMhTiJ0LKgIm5Xt3.iRg347c4IdCbTblhnKGRTbf1d2GGfHa",
+      "age": 30,
+      "weight": 80,
+      "height": 180,
+      "createdAt": "2026-06-02T17:56:58.592Z",
+      "goal": "weight_loss",
+      "onboardingCompleted": true
+    },
+    {
+      "_id": "aj20v9mmpwxyecf",
+      "username": "adidenko755",
+      "email": "adidenko755@gmail.com",
+      "password": "$2a$10$B7Va/sDJDmqI0kr1.8FGo.dH.J.IniwBa6HEoTbGcD5bqa6qBfwd6",
+      "age": 25,
+      "weight": 70,
+      "height": 170,
+      "createdAt": "2026-06-02T17:58:38.367Z"
+    }
+  ],
+  "DailyStat": [
+    {
+      "_id": "ih9bmqwmpwxyee9",
+      "userId": "aj20v9mmpwxyecf",
+      "date": "2026-06-02",
+      "water": 0,
+      "createdAt": "2026-06-02T17:58:38.433Z",
+      "steps": 0,
+      "calories": 0,
+      "heartRate": 0,
+      "sleepHours": 0
+    }
+  ],
+  "Workout": [],
+  "Activity": [],
+  "HealthMetric": [],
+  "MealLog": [],
+  "WaterLog": [],
+  "WeightLog": [],
+  "PlannedWorkout": [
+    {
+      "_id": "ckylvecmpwxxlam",
+      "userId": "tlb4fk6mpwxw9cw",
+      "name": "Верхня частина тіла (Вдома)",
+      "programId": "home_workout",
+      "dayId": "home_workout_day_1",
+      "exercises": [
+        {
+          "id": "push_ups_work_0",
+          "exercise": {
+            "id": "push_ups",
+            "name": "push_ups",
+            "nameUk": "Віджимання від підлоги",
+            "primaryMuscleGroup": "chest",
+            "equipment": "none",
+            "instructions": [],
+            "instructionsUk": []
+          },
+          "sets": [
+            {
+              "id": "push_ups_set_0",
+              "reps": 10,
+              "weight": 0,
+              "restTime": 60,
+              "isCompleted": false
+            },
+            {
+              "id": "push_ups_set_1",
+              "reps": 10,
+              "weight": 0,
+              "restTime": 60,
+              "isCompleted": false
+            }
+          ],
+          "order": 0
+        },
+        {
+          "id": "bicep_curls_work_1",
+          "exercise": {
+            "id": "bicep_curls",
+            "name": "bicep_curls",
+            "nameUk": "Згинання рук на біцепс",
+            "primaryMuscleGroup": "chest",
+            "equipment": "none",
+            "instructions": [],
+            "instructionsUk": []
+          },
+          "sets": [
+            {
+              "id": "bicep_curls_set_0",
+              "reps": 12,
+              "weight": 5,
+              "restTime": 60,
+              "isCompleted": false
+            },
+            {
+              "id": "bicep_curls_set_1",
+              "reps": 12,
+              "weight": 5,
+              "restTime": 60,
+              "isCompleted": false
+            }
+          ],
+          "order": 1
+        }
+      ],
+      "scheduledDate": "2026-06-03",
+      "isCompleted": false,
+      "createdAt": "2026-06-02T17:58:00.718Z"
+    },
+    {
+      "_id": "g4wzd6wmpwxxlan",
+      "userId": "tlb4fk6mpwxw9cw",
+      "name": "Нижня частина тіла (Вдома)",
+      "programId": "home_workout",
+      "dayId": "home_workout_day_2",
+      "exercises": [
+        {
+          "id": "squats_work_0",
+          "exercise": {
+            "id": "squats",
+            "name": "squats",
+            "nameUk": "Присідання без ваги",
+            "primaryMuscleGroup": "chest",
+            "equipment": "none",
+            "instructions": [],
+            "instructionsUk": []
+          },
+          "sets": [
+            {
+              "id": "squats_set_0",
+              "reps": 15,
+              "weight": 0,
+              "restTime": 60,
+              "isCompleted": false
+            },
+            {
+              "id": "squats_set_1",
+              "reps": 15,
+              "weight": 0,
+              "restTime": 60,
+              "isCompleted": false
+            }
+          ],
+          "order": 0
+        }
+      ],
+      "scheduledDate": "2026-06-05",
+      "isCompleted": false,
+      "createdAt": "2026-06-02T17:58:00.719Z"
+    },
+    {
+      "_id": "srd67cwmpwxxlao",
+      "userId": "tlb4fk6mpwxw9cw",
+      "name": "Кардіо тренування",
+      "programId": "home_workout",
+      "dayId": "home_workout_day_3",
+      "exercises": [
+        {
+          "id": "running_work_0",
+          "exercise": {
+            "id": "running",
+            "name": "running",
+            "nameUk": "Біг середньої інтенсивності",
+            "primaryMuscleGroup": "chest",
+            "equipment": "none",
+            "instructions": [],
+            "instructionsUk": []
+          },
+          "sets": [
+            {
+              "id": "running_set_0",
+              "reps": 1,
+              "weight": 0,
+              "restTime": 60,
+              "isCompleted": false
+            }
+          ],
+          "order": 0
+        }
+      ],
+      "scheduledDate": "2026-06-07",
+      "isCompleted": false,
+      "createdAt": "2026-06-02T17:58:00.720Z"
+    }
+  ],
+  "CompletedWorkout": [],
+  "PersonalRecord": [],
+  "WorkoutGoal": [],
+  "CustomExercise": [],
+  "CustomProgram": [],
+  "TrainerBooking": [],
+  "TrainerChat": [],
+  "UserMusic": []
+}

@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { useI18n } from "@/hooks/useI18n";
 import { useWater } from "@/hooks/useWater";
 import { useWorkouts } from "@/hooks/useWorkouts";
+import { useDaily } from "@/hooks/useDaily";
 import { toast } from "sonner";
 
 interface ActivityWaterProps {
@@ -20,7 +21,7 @@ interface ActivityWaterProps {
 export function ActivityWater({ 
   waterGoal: propWaterGoal, 
   waterConsumed: propWaterConsumed,
-  steps = 0,
+  steps: propSteps,
   stepsGoal = 10000,
   caloriesBurned: propCaloriesBurned
 }: ActivityWaterProps) {
@@ -28,34 +29,37 @@ export function ActivityWater({
   const { t } = useI18n();
   const { todayWater, waterGoal: contextWaterGoal, addWater } = useWater();
   const { completedWorkouts } = useWorkouts();
+  const { totals } = useDaily();
   
   const waterGoal = propWaterGoal ?? contextWaterGoal;
   const waterConsumed = propWaterConsumed ?? todayWater;
+  
+  const actualSteps = propSteps ?? totals.steps ?? 0;
   
   const caloriesBurned = propCaloriesBurned ?? completedWorkouts.reduce((sum, workout) => {
     return sum + ((workout.duration || 0) * 5); // Estimation: ~5 kcal per minute
   }, 0);
   
   const waterProgress = (waterConsumed / waterGoal) * 100;
-  const stepsProgress = (steps / stepsGoal) * 100;
+  const stepsProgress = (actualSteps / stepsGoal) * 100;
   
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <>
       {/* Вода */}
       <Card className="p-5 bg-card border border-border shadow-card rounded-2xl hover:shadow-elevated transition-all duration-300">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-secondary/10 flex items-center justify-center">
+            <div className="w-11 h-11 rounded-2xl bg-secondary/10 flex items-center justify-center flex-shrink-0">
               <HugeiconsIcon icon={DropletIcon} size={24} className="text-secondary" strokeWidth={1.5} />
             </div>
-            <div>
-              <h4 className="font-semibold text-foreground">{t("water")}</h4>
-              <p className="text-sm text-muted-foreground">
+            <div className="min-w-0">
+              <h4 className="font-semibold text-foreground truncate">{t("water")}</h4>
+              <p className="text-sm text-muted-foreground truncate">
                 {waterConsumed}л / {waterGoal}л
               </p>
             </div>
           </div>
-          <Badge variant="outline" className="text-xs rounded-full px-3">
+          <Badge variant="outline" className="text-xs rounded-full px-2 flex-shrink-0">
             {Math.round(waterProgress)}%
           </Badge>
         </div>
@@ -67,14 +71,14 @@ export function ActivityWater({
           />
         </div>
         
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium text-muted-foreground">
-            {waterProgress >= 100 ? t("achieved") : waterProgress >= 50 ? "Добре йде!" : "Потрібно більше"}
+        <div className="flex items-center justify-between gap-2 mt-auto">
+          <p className="text-sm font-medium text-muted-foreground truncate">
+            {waterProgress >= 100 ? t("achieved") : waterProgress >= 50 ? "Добре!" : "Потрібно більше"}
           </p>
           <Button 
             size="sm" 
             variant="outline" 
-            className="text-xs h-8 px-3 rounded-full"
+            className="text-xs h-8 px-2 rounded-full flex-shrink-0"
             onClick={() => {
               addWater(0.25);
               toast.success("Додано 250мл води");
@@ -86,39 +90,39 @@ export function ActivityWater({
       </Card>
       
       {/* Активність */}
-      <Card className="p-5 bg-card border border-border shadow-card rounded-2xl hover:shadow-elevated transition-all duration-300">
+      <Card className="p-5 bg-card border border-border shadow-card rounded-2xl hover:shadow-elevated transition-all duration-300 flex flex-col">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0">
               <HugeiconsIcon icon={Activity01Icon} size={24} className="text-primary" strokeWidth={1.5} />
             </div>
-            <div>
-              <h4 className="font-semibold text-foreground">{t("activity")}</h4>
-              <p className="text-sm text-muted-foreground">
-                {steps.toLocaleString()} / {stepsGoal.toLocaleString()} {t("steps")}
+            <div className="min-w-0">
+              <h4 className="font-semibold text-foreground truncate">{t("activity")}</h4>
+              <p className="text-sm text-muted-foreground truncate">
+                {actualSteps.toLocaleString()} / {stepsGoal.toLocaleString()}
               </p>
             </div>
           </div>
-          <Badge variant="outline" className="text-xs rounded-full px-3">
+          <Badge variant="outline" className="text-xs rounded-full px-2 flex-shrink-0 ml-2">
             {Math.round(stepsProgress)}%
           </Badge>
         </div>
         
-        <div className="w-full bg-muted rounded-full h-2.5 mb-4">
+        <div className="w-full bg-muted rounded-full h-2.5 mb-4 mt-auto">
           <div 
             className="h-2.5 rounded-full bg-primary transition-all duration-500"
             style={{ width: `${Math.min(stepsProgress, 100)}%` }}
           />
         </div>
         
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-medium text-muted-foreground">
-              {stepsProgress >= 100 ? "Відмінно!" : stepsProgress >= 50 ? "Добре йде!" : "Потрібно рухатись"}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-col items-start gap-1 min-w-0">
+            <p className="text-xs font-medium text-muted-foreground truncate max-w-full">
+              {stepsProgress >= 100 ? "Відмінно!" : stepsProgress >= 50 ? "Добре йде!" : "Рухайтесь"}
             </p>
             {caloriesBurned > 0 && (
-              <Badge variant="outline" className="text-xs rounded-full">
-                <HugeiconsIcon icon={Target02Icon} size={12} className="mr-1" />
+              <Badge variant="outline" className="text-[10px] rounded-full px-1.5 flex-shrink-0">
+                <HugeiconsIcon icon={Target02Icon} size={10} className="mr-1 inline-block" />
                 {caloriesBurned} ккал
               </Badge>
             )}
@@ -126,14 +130,14 @@ export function ActivityWater({
           <Button 
             size="sm" 
             variant="outline" 
-            className="text-xs h-8 px-3 rounded-full"
+            className="text-xs h-8 px-2 rounded-full flex-shrink-0"
             onClick={() => navigate("/training")}
           >
             <HugeiconsIcon icon={ChartIncreaseIcon} size={14} className="mr-1" />
-            Тренування
+            Спорт
           </Button>
         </div>
       </Card>
-    </div>
+    </>
   );
 }

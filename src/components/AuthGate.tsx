@@ -1,35 +1,30 @@
 import { useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation, useNavigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, isLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   // Проверяем, завершен ли онбординг (мемоизируем результат)
   const isOnboardingComplete = useMemo(() => {
-    // 1. Check if user already has profile data in local storage
-    const hasLocalProfile = !!localStorage.getItem("omom_profile_extra");
-    
-    // 2. Check if the user object from backend has profile fields
-    // Default values in backend are 25, 70, 170 if not specified during registration.
-    // However, if the user has these fields, it means they are already "initialized" in MongoDB.
-    const hasBackendProfile = !!(user?.age && user?.weight && user?.height);
-
-    const result = hasLocalProfile || hasBackendProfile;
-    console.log("AuthGate: Onboarding status check. Local:", hasLocalProfile, "Backend:", hasBackendProfile, "Final:", result);
-    return result;
+    return !!user?.onboardingCompleted;
   }, [user, location.pathname]); // Пересчитываем при смене пользователя или пути
 
   useEffect(() => {
+    if (isLoading) return;
+
     if (!isAuthenticated && location.pathname !== "/auth" && location.pathname !== "/auth/google/callback") {
       try { sessionStorage.setItem("omom_post_login", location.pathname + location.search); } catch {}
       navigate("/auth", { replace: true });
     }
-  }, [isAuthenticated, navigate, location.pathname]);
+  }, [isLoading, isAuthenticated, navigate, location.pathname]);
 
   useEffect(() => {
+    if (isLoading) return;
+
     if (isAuthenticated && location.pathname === "/auth") {
       console.log("AuthGate: User authenticated on /auth, checking onboarding");
       console.log("AuthGate: Onboarding complete:", isOnboardingComplete);
@@ -46,19 +41,23 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       try { target = sessionStorage.getItem("omom_post_login") || "/"; } catch {}
       navigate(target, { replace: true });
     }
-  }, [isAuthenticated, location.pathname, navigate, isOnboardingComplete]);
+  }, [isLoading, isAuthenticated, location.pathname, navigate, isOnboardingComplete]);
 
   // Дополнительная проверка: если пользователь авторизован, но не завершил онбординг,
   // и находится не на странице /auth, перенаправляем на /auth
   useEffect(() => {
-    if (isAuthenticated && !isOnboardingComplete && location.pathname !== "/auth") {
+    if (isLoading) return;
+
+    if (isAuthenticated && !isOnboardingComplete && location.pathname !== "/auth" && location.pathname !== "/auth/google/callback") {
       console.log("AuthGate: Redirecting to /auth for onboarding");
       navigate("/auth", { replace: true });
     }
-  }, [isAuthenticated, location.pathname, navigate, isOnboardingComplete]);
+  }, [isLoading, isAuthenticated, location.pathname, navigate, isOnboardingComplete]);
 
   // Проверяем изменения в localStorage для онбординга
   useEffect(() => {
+    if (isLoading) return;
+
     const handleStorageChange = () => {
       if (isAuthenticated && isOnboardingComplete && location.pathname === "/auth") {
         console.log("AuthGate: Onboarding completed, redirecting to home");
@@ -77,11 +76,23 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, [isAuthenticated, location.pathname, navigate, isOnboardingComplete]);
+  }, [isLoading, isAuthenticated, location.pathname, navigate, isOnboardingComplete]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen w-full bg-background flex items-center justify-center p-4">
+        <div className="text-center space-y-4">
+          <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto" />
+          <p className="text-muted-foreground animate-pulse font-medium">Завантаження сесії...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>{children}</>
   );
 }
+
 
 

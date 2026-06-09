@@ -29,37 +29,66 @@ import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { useI18n } from "@/hooks/useI18n";
 import { useAI } from "@/hooks/useAI";
+import { useDaily } from "@/hooks/useDaily";
+import { useWorkouts } from "@/hooks/useWorkouts";
+import { toast } from "sonner";
 
 export default function Profile() {
-  const { user, updateUser, logout } = useAuth();
+  const { user, updateUser, logout, toggleDevRole } = useAuth();
   const navigate = useNavigate();
   const { t } = useI18n();
   const { analyzeUserDataDeep } = useAI();
   const [aiInsight, setAiInsight] = useState<string>("");
   const [isLoadingInsight, setIsLoadingInsight] = useState(false);
 
-  // Mock data for profile
-  const profileData = useMemo(() => ({
-    level: 15,
-    xp: 1250,
-    xpToNextLevel: 1500,
-    streakDays: 7,
-    currentWeight: 70.5,
-    targetWeight: 65,
-    dailyCalories: 1850,
-    weeklyProgress: {
-      calories: { current: 1850, goal: 2000, percentage: 92 },
-      workouts: { completed: 3, goal: 5, percentage: 60 },
-      sleep: { average: 7.2, goal: 8, percentage: 90 }
-    },
-    achievements: [
-      { id: "1", title: "Перша тренування", icon: Trophy, unlocked: true, rarity: "common" },
-      { id: "2", title: "Тиждень підряд", icon: Calendar, unlocked: true, rarity: "rare" },
-      { id: "3", title: "Силач", icon: Award, unlocked: false, rarity: "epic" },
-      { id: "4", title: "Марафонець", icon: Flame, unlocked: false, rarity: "legendary" }
-    ],
-    activityHeatmap: generateActivityHeatmap()
-  }), []);
+  const { totals, streakDays } = useDaily();
+  const { completedWorkouts } = useWorkouts();
+
+  // Real data for profile
+  const profileData = useMemo(() => {
+    const caloriesTarget = user?.calculatedCalories || user?.targets?.calories || 2000;
+    const currentWeight = user?.weight || 0;
+    const targetWeight = user?.targetWeight || currentWeight;
+    
+    // Dynamic level based on real streak days
+    const level = Math.max(1, Math.floor(streakDays / 7) + 1);
+    const xp = (streakDays % 7) * 150 + Math.floor(totals.calories / 100);
+    const xpToNextLevel = 1000;
+
+    return {
+      level,
+      xp,
+      xpToNextLevel,
+      streakDays: streakDays || 0,
+      currentWeight,
+      targetWeight,
+      dailyCalories: caloriesTarget,
+      weeklyProgress: {
+        calories: { 
+          current: totals.calories, 
+          goal: caloriesTarget, 
+          percentage: caloriesTarget ? Math.min(100, Math.round((totals.calories / caloriesTarget) * 100)) : 0 
+        },
+        workouts: { 
+          completed: completedWorkouts.length, 
+          goal: 3, 
+          percentage: Math.min(100, Math.round((completedWorkouts.length / 3) * 100)) || 0 
+        },
+        sleep: { 
+          average: totals.sleepHours || 0, 
+          goal: 8, 
+          percentage: Math.min(100, Math.round(((totals.sleepHours || 0) / 8) * 100)) || 0 
+        }
+      },
+      achievements: [
+        { id: "1", title: "Перше тренування", icon: Trophy, unlocked: streakDays > 0, rarity: "common" },
+        { id: "2", title: "Тиждень підряд", icon: Calendar, unlocked: streakDays >= 7, rarity: "rare" },
+        { id: "3", title: "Силач", icon: Award, unlocked: streakDays >= 30, rarity: "epic" },
+        { id: "4", title: "Марафонець", icon: Flame, unlocked: streakDays >= 100, rarity: "legendary" }
+      ],
+      activityHeatmap: generateActivityHeatmap()
+    };
+  }, [user, totals, streakDays]);
 
   // Generate AI insight on component mount
   useEffect(() => {
@@ -148,12 +177,20 @@ export default function Profile() {
     const data = [];
     const today = new Date();
     
-    for (let i = 30; i >= 0; i--) {
+    for (let i = 27; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
       const dateStr = date.toISOString().split('T')[0];
       
-      const intensity = Math.floor(Math.random() * 5);
+      let intensity = 0;
+      if (i < streakDays) {
+        if (i === 0) {
+          intensity = totals.calories > 0 ? Math.min(4, Math.ceil(totals.calories / 500)) : 1;
+        } else {
+          intensity = 2;
+        }
+      }
+      
       data.push({
         date: dateStr,
         intensity,
@@ -363,7 +400,7 @@ export default function Profile() {
                 <span className="font-medium">Харчування</span>
               </div>
               <div className="space-y-2">
-                <div className="text-2xl font-bold text-green-500">92%</div>
+                <div className="text-2xl font-bold text-green-500">{profileData.weeklyProgress.calories.percentage}%</div>
                 <div className="text-xs text-muted-foreground">від плану</div>
               </div>
             </Card>
@@ -377,7 +414,7 @@ export default function Profile() {
                 <span className="font-medium">Активність</span>
               </div>
               <div className="space-y-2">
-                <div className="text-2xl font-bold text-blue-500">60%</div>
+                <div className="text-2xl font-bold text-blue-500">{profileData.weeklyProgress.workouts.percentage}%</div>
                 <div className="text-xs text-muted-foreground">тренувань</div>
               </div>
             </Card>
@@ -391,7 +428,7 @@ export default function Profile() {
                 <span className="font-medium">Відновлення</span>
               </div>
               <div className="space-y-2">
-                <div className="text-2xl font-bold text-purple-500">90%</div>
+                <div className="text-2xl font-bold text-purple-500">{profileData.weeklyProgress.sleep.percentage}%</div>
                 <div className="text-xs text-muted-foreground">сон</div>
               </div>
             </Card>

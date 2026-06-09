@@ -22,7 +22,7 @@ import {
   TrendingUp
 } from "lucide-react";
 import { toast } from "sonner";
-import { getGeminiService, ProductAnalysisRequest, ProductAnalysis } from "@/lib/gemini-ai";
+import { getOpenAIService, ProductAnalysisRequest, ProductAnalysis } from "@/lib/openai-ai";
 
 interface AIProductAnalyzerProps {
   onProductAnalyzed?: (analysis: ProductAnalysis) => void;
@@ -59,7 +59,7 @@ export function AIProductAnalyzer({ onProductAnalyzed, onAddToFavorites }: AIPro
 
     setIsAnalyzing(true);
     try {
-      const geminiService = getGeminiService();
+      const openaiService = getOpenAIService();
       
       const request: ProductAnalysisRequest = {
         productName: productName.trim(),
@@ -67,7 +67,7 @@ export function AIProductAnalyzer({ onProductAnalyzed, onAddToFavorites }: AIPro
         brand: brand || undefined
       };
 
-      const productAnalysis = await geminiService.analyzeProduct(request);
+      const productAnalysis = await openaiService.analyzeProduct(request);
       setAnalysis(productAnalysis);
       onProductAnalyzed?.(productAnalysis);
       toast.success("Анализ продукта завершен!");

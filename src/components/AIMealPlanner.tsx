@@ -23,7 +23,7 @@ import {
   Copy
 } from "lucide-react";
 import { toast } from "sonner";
-import { getGeminiService, MealPlanRequest, GeneratedMealPlan } from "@/lib/gemini-ai";
+import { getOpenAIService, MealPlanRequest, GeneratedMealPlan } from "@/lib/openai-ai";
 import { useSmartFridge } from "@/hooks/useSmartFridge";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -111,7 +111,7 @@ export function AIMealPlanner({ onMealPlanGenerated, onAddToFavorites }: AIMealP
 
     setIsGenerating(true);
     try {
-      const geminiService = getGeminiService();
+      const openaiService = getOpenAIService();
       
       const request: MealPlanRequest = {
         targetCalories,
@@ -126,7 +126,7 @@ export function AIMealPlanner({ onMealPlanGenerated, onAddToFavorites }: AIMealP
         cookingTime
       };
 
-      const mealPlan = await geminiService.generateMealPlan(request);
+      const mealPlan = await openaiService.generateMealPlan(request);
       setGeneratedMealPlan(mealPlan);
       onMealPlanGenerated?.(mealPlan);
       toast.success("План питания успешно сгенерирован!");

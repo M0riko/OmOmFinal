@@ -20,6 +20,7 @@ import { toast } from "sonner";
 export default function Recipes() {
   const [apiRecipes, setApiRecipes] = useState<Recipe[]>([]);
   const [favorites, setFavorites] = useState<number[]>([]);
+  const [favoriteObjects, setFavoriteObjects] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalResults, setTotalResults] = useState(0);
@@ -125,11 +126,16 @@ export default function Recipes() {
     if (savedFavorites) {
       setFavorites(JSON.parse(savedFavorites));
     }
+    const savedObjects = localStorage.getItem("omomo_favorite_objects");
+    if (savedObjects) {
+      setFavoriteObjects(JSON.parse(savedObjects));
+    }
   }, []);
 
   useEffect(() => {
     localStorage.setItem("omomo_favorites", JSON.stringify(favorites));
-  }, [favorites]);
+    localStorage.setItem("omomo_favorite_objects", JSON.stringify(favoriteObjects));
+  }, [favorites, favoriteObjects]);
 
   // Auto-load random recipes when component mounts
   useEffect(() => {
@@ -225,12 +231,20 @@ export default function Recipes() {
     }
   };
 
-  const toggleFavorite = (recipeId: number) => {
+  const toggleFavorite = (recipe: Recipe) => {
+    const recipeId = recipe.id;
     setFavorites(prev => 
       prev.includes(recipeId) 
         ? prev.filter(id => id !== recipeId)
         : [...prev, recipeId]
     );
+    setFavoriteObjects(prev => {
+      if (prev.some(r => r.id === recipeId)) {
+        return prev.filter(r => r.id !== recipeId);
+      } else {
+        return [...prev, recipe];
+      }
+    });
   };
 
   const openRecipeDetails = (recipe: Recipe) => {
@@ -375,7 +389,7 @@ export default function Recipes() {
         );
 
       case "favorites":
-        const favoriteRecipes = apiRecipes.filter(recipe => favorites.includes(recipe.id));
+        const favoriteRecipes = favoriteObjects;
         
         if (favorites.length === 0) {
           return (

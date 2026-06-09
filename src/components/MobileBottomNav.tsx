@@ -4,15 +4,17 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { Menu01Icon } from '@hugeicons/core-free-icons';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useI18n } from "@/hooks/useI18n";
+import { useAuth } from "@/hooks/useAuth";
 import { useState } from "react";
 
 export function MobileBottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const { user } = useAuth();
   const [sheetOpen, setSheetOpen] = useState(false);
   const mainPaths = ["/", "/recipes", "/meal-plan", "/fridge", "/profile"] as const;
-  const extraPaths = ["/shopping", "/training", "/articles", "/ai-coach"] as const;
+  const extraPaths = ["/shopping", "/training", "/trainers", "/music", "/articles", "/ai-coach"] as const;
   const isExtrasActive = extraPaths.includes(location.pathname as any);
   
   const handleNavClick = (path: string) => {
@@ -30,6 +32,8 @@ export function MobileBottomNav() {
       "profile": "Профіль",
       "shopping": "Покупки",
       "training": "Тренування",
+      "trainers": "Тренери",
+      "music": "Музика",
       "articles": "Статті",
       "aiCoach": "AI Коуч"
     };
@@ -124,6 +128,22 @@ export function MobileBottomNav() {
                       </button>
                     );
                   })}
+
+                {user?.role === 'admin' && (
+                  <button
+                    onClick={() => handleNavClick("/admin")}
+                    className={`flex flex-col items-center justify-center gap-3 p-5 rounded-2xl transition-all duration-200 min-h-[90px] active:scale-95 ${
+                      location.pathname === "/admin" 
+                        ? "bg-purple-950/40 text-purple-300 border border-purple-800/30" 
+                        : "bg-purple-900/10 text-purple-400 border border-purple-800/20 hover:bg-purple-900/20"
+                    }`}
+                  >
+                    <span className="w-7 h-7 flex items-center justify-center mb-1">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-shield-check"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2-1 4-2 7-2 2.76 0 5 1 7 2a1 1 0 0 1 1 1v7z"/><path d="m9 12 2 2 4-4"/></svg>
+                    </span>
+                    <span className="text-xs font-medium text-center">{locale === 'uk' ? 'Адмін Панель' : 'Admin Panel'}</span>
+                  </button>
+                )}
               </div>
             </div>
           </SheetContent>

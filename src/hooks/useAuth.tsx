@@ -12,6 +12,11 @@ export type AuthUser = {
   age?: number;
   weight?: number;
   height?: number;
+  role?: 'user' | 'admin';
+  isPremium?: boolean;
+  onboardingCompleted?: boolean;
+  targetWeight?: number;
+  calculatedCalories?: number;
   targets?: {
     calories: number;
     protein: number;
@@ -30,6 +35,8 @@ type AuthContextValue = {
   loginWithGoogle: () => Promise<void>;
   logout: () => void;
   updateUser: (updates: Partial<AuthUser>) => void;
+  activatePremium: () => Promise<void>;
+  toggleDevRole: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -68,12 +75,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               age: data.user.age,
               weight: data.user.weight,
               height: data.user.height,
+              role: data.user.role,
+              isPremium: data.user.isPremium,
+              onboardingCompleted: data.user.onboardingCompleted,
+              targetWeight: data.user.targetWeight,
+              calculatedCalories: data.user.calculatedCalories,
               targets: localTargets
             });
           } else {
             localStorage.removeItem('omomo_auth_token');
             localStorage.removeItem(STORAGE_KEY);
+            setUser(null);
           }
+        } else {
+          localStorage.removeItem(STORAGE_KEY);
+          setUser(null);
         }
       } catch (e) {
         console.error("Session validation error:", e);
@@ -122,6 +138,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       age: data.user.age,
       weight: data.user.weight,
       height: data.user.height,
+      role: data.user.role,
+      isPremium: data.user.isPremium,
+      onboardingCompleted: data.user.onboardingCompleted,
+      targetWeight: data.user.targetWeight,
+      calculatedCalories: data.user.calculatedCalories,
       targets: localTargets
     });
   }, []);
@@ -151,12 +172,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       age: data.user.age,
       weight: data.user.weight,
       height: data.user.height,
+      role: data.user.role,
+      isPremium: data.user.isPremium,
+      onboardingCompleted: data.user.onboardingCompleted || false,
+      targetWeight: data.user.targetWeight,
+      calculatedCalories: data.user.calculatedCalories,
       targets: { calories: 2000, protein: 120, fats: 65, carbs: 250 }
     });
   }, []);
 
-  const completeRegistration = useCallback((email: string, userData: any) => {
-    const { name, calculatedCalories } = userData;
+  const completeRegistration = useCallback(async (email: string, userData: any) => {
+    const { name, calculatedCalories, targetWeight, weight, height, age, goals } = userData;
+    
+    // Оновлюємо бекенд
+    try {
+      const token = localStorage.getItem('omomo_auth_token');
+      if (token) {
+        await fetch(`${API_BASE}/api/user/onboarding`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            username: name,
+            calculatedCalories,
+            targetWeight,
+            weight,
+            height,
+            age,
+            goals
+          })
+        });
+      }
+    } catch (e) {
+      console.error("Помилка збереження онбордінгу на бекенд:", e);
+    }
     
     // This updates the local context properties
     setUser(prev => {
@@ -164,6 +215,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return {
         ...prev,
         name: name || prev.name,
+        onboardingCompleted: true,
         targets: { 
           calories: calculatedCalories || 2000, 
           protein: Math.round((calculatedCalories || 2000) * 0.25 / 4), 
@@ -245,6 +297,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const activatePremium = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('omomo_auth_token');
+      if (!token) return;
+      const res = await fetch(`${API_BASE}/api/user/premium/activate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUser(prev => prev ? { ...prev, isPremium: data.user.isPremium } : prev);
+      }
+    } catch (e) {
+      console.error("Premium activation error:", e);
+    }
+  }, []);
+
+  const toggleDevRole = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('omomo_auth_token');
+      if (!token) return;
+      const res = await fetch(`${API_BASE}/api/user/dev/toggle-role`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUser(prev => prev ? { ...prev, role: data.user.role, isPremium: data.user.isPremium } : prev);
+      }
+    } catch (e) {
+      console.error("Dev toggle-role error:", e);
+    }
+  }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({ 
       user, 
@@ -255,9 +347,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       completeRegistration, 
       loginWithGoogle, 
       logout, 
-      updateUser 
+      updateUser,
+      activatePremium,
+      toggleDevRole
     }),
-    [user, isLoading, login, register, completeRegistration, loginWithGoogle, logout, updateUser],
+    [user, isLoading, login, register, completeRegistration, loginWithGoogle, logout, updateUser, activatePremium, toggleDevRole],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

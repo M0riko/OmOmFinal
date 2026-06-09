@@ -24,6 +24,10 @@ import { useDaily } from './useDaily';
 // import { useWorkouts } from './useWorkouts';
 import { toast } from 'sonner';
 
+const API_BASE = import.meta.env.PROD
+  ? (import.meta.env.VITE_API_BASE_URL && !import.meta.env.VITE_API_BASE_URL.includes('localhost') ? import.meta.env.VITE_API_BASE_URL : '')
+  : (import.meta.env.VITE_API_BASE_URL || '');
+
 const STORAGE_KEYS = {
   USER_INTERACTIONS: 'omomo_article_interactions',
   SAVED_ARTICLES: 'omomo_saved_articles',
@@ -41,6 +45,7 @@ export function useArticles() {
   const [userInteractions, setUserInteractions] = useState<UserArticleInteraction[]>([]);
   const [savedArticles, setSavedArticles] = useState<string[]>([]);
   const [userArticles, setUserArticles] = useState<Article[]>([]);
+  const [backendArticles, setBackendArticles] = useState<Article[]>([]);
   const [readingStats, setReadingStats] = useState<UserReadingStats>({
     totalArticlesRead: 0,
     totalReadingTime: 0,
@@ -111,11 +116,49 @@ export function useArticles() {
     }
   }, [userArticles]);
 
+  // Получение статей с сервера
+  useEffect(() => {
+    fetch(`${API_BASE}/api/articles`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.articles) {
+          // Маппинг данных с бекенда в формат Article
+          const mappedArticles: Article[] = data.articles.map((a: any) => ({
+            id: a._id,
+            title: a.title,
+            titleUk: a.titleUk,
+            excerpt: a.excerpt || "",
+            excerptUk: a.excerptUk || "",
+            content: a.content,
+            contentUk: a.contentUk,
+            author: a.authorName || "User",
+            authorUk: a.authorNameUk || "Користувач",
+            authorId: a.authorId,
+            category: DEFAULT_ARTICLE_CATEGORIES.find(c => c.id === a.categoryId) || DEFAULT_ARTICLE_CATEGORIES[0],
+            tags: a.tags || [],
+            publishedAt: a.publishedAt,
+            readTime: a.readingTime ? `${a.readingTime} хв читання` : "5 хв читання",
+            readingTime: a.readingTime || 5,
+            imageUrl: a.imageUrl || "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=2053&auto=format&fit=crop",
+            imageAlt: a.imageAlt || "Article image",
+            imageAltUk: a.imageAltUk || "Зображення до статті",
+            difficulty: a.difficulty as any,
+            views: a.views || 0,
+            likes: a.likes || 0,
+            saves: a.saves || 0,
+            isPublished: true
+          }));
+          setBackendArticles(mappedArticles);
+        }
+      })
+      .catch(console.error);
+  }, []);
+
   // Получение всех статей
   const allArticles = useMemo(() => {
     const publishedArticles = ARTICLES_DATABASE.filter(article => article.isPublished);
-    return [...publishedArticles, ...userArticles];
-  }, [userArticles]);
+    return [...publishedArticles, ...backendArticles, ...userArticles];
+  }, [userArticles, backendArticles]);
 
   // Получение всех категорий
   const allCategories = useMemo(() => {
@@ -368,9 +411,49 @@ export function useArticles() {
   };
 
   // Функции для управления пользовательскими статьями
-  const createUserArticle = useCallback((article: Article) => {
-    setUserArticles(prev => [article, ...prev]);
-    toast.success('Статтю успішно створено!');
+  const createUserArticle = useCallback(async (article: Article) => {
+    try {
+      const token = localStorage.getItem('omomo_auth_token');
+      if (!token) {
+        toast.error('Ви повинні бути авторизовані для створення статті');
+        return;
+      }
+      
+      const payload = {
+        title: article.title,
+        titleUk: article.titleUk,
+        excerpt: article.excerpt,
+        excerptUk: article.excerptUk,
+        content: article.content,
+        contentUk: article.contentUk,
+        categoryId: article.category.id,
+        tags: article.tags,
+        difficulty: article.difficulty,
+        readingTime: article.readingTime,
+        imageUrl: article.imageUrl,
+        imageAlt: article.imageAlt,
+        imageAltUk: article.imageAltUk
+      };
+
+      const res = await fetch(`${API_BASE}/api/articles`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      if (res.ok) {
+        toast.success('Ваша стаття відправлена на модерацію!');
+        // We do not add it directly to userArticles until approved by admin
+      } else {
+        toast.error('Помилка при створенні статті');
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('Сталася помилка');
+    }
   }, []);
 
   const updateUserArticle = useCallback((articleId: string, updates: Partial<Article>) => {
@@ -380,9 +463,33 @@ export function useArticles() {
     toast.success('Статтю успішно оновлено!');
   }, []);
 
-  const deleteUserArticle = useCallback((articleId: string) => {
-    setUserArticles(prev => prev.filter(article => article.id !== articleId));
-    toast.success('Статтю успішно видалено!');
+  const deleteUserArticle = useCallback(async (articleId: string) => {
+    try {
+      const token = localStorage.getItem('omomo_auth_token');
+      if (token) {
+        // Also try to delete from backend if it exists there
+        const API_BASE = import.meta.env.PROD
+          ? (import.meta.env.VITE_API_BASE_URL && !import.meta.env.VITE_API_BASE_URL.includes('localhost') ? import.meta.env.VITE_API_BASE_URL : '')
+          : (import.meta.env.VITE_API_BASE_URL || '');
+          
+        await fetch(`${API_BASE}/api/articles/${articleId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        // Remove from backendArticles state if present
+        setBackendArticles(prev => prev.filter(article => article.id !== articleId));
+      }
+      
+      // Remove from local userArticles state
+      setUserArticles(prev => prev.filter(article => article.id !== articleId));
+      toast.success('Статтю успішно видалено!');
+    } catch (error) {
+      console.error('Error deleting article:', error);
+      toast.error('Помилка при видаленні статті');
+    }
   }, []);
 
   const getUserArticles = useCallback(() => {

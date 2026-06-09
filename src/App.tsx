@@ -23,6 +23,11 @@ import AICoach from "./pages/AICoach";
 import Settings from "./pages/Settings";
 import GoogleCallback from "./pages/GoogleCallback";
 import { useAuth } from "./hooks/useAuth";
+import Trainers from "./pages/Trainers";
+import Music from "./pages/Music";
+import AdminPage from "./pages/Admin";
+import VerifyEmail from "./pages/VerifyEmail";
+import ResetPassword from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
 
@@ -69,11 +74,15 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/auth/google/callback" element={<GoogleCallback />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/recipes" element={<Recipes />} />
             <Route path="/fridge" element={<SmartFridge />} />
             <Route path="/meal-plan" element={<MealPlan />} />
             <Route path="/shopping" element={<Shopping />} />
             <Route path="/training" element={<Training />} />
+            <Route path="/trainers" element={<Trainers />} />
+            <Route path="/music" element={<Music />} />
             <Route path="/articles" element={<Articles />} />
             <Route path="/ai-coach" element={<AICoach />} />
             <Route
@@ -97,6 +106,14 @@ const App = () => (
               element={
                 <Protected>
                   <Settings />
+                </Protected>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <Protected>
+                  <AdminPage />
                 </Protected>
               }
             />

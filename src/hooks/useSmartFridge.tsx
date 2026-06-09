@@ -13,7 +13,12 @@ import {
   UnitType
 } from "@/lib/smart-fridge";
 import { apiService } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+
+const API_BASE = import.meta.env.PROD
+  ? (import.meta.env.VITE_API_BASE_URL && !import.meta.env.VITE_API_BASE_URL.includes('localhost') ? import.meta.env.VITE_API_BASE_URL : '')
+  : (import.meta.env.VITE_API_BASE_URL || '');
 
 export function useSmartFridge() {
   const [products, setProducts] = useState<SmartFridgeProduct[]>([]);
@@ -21,57 +26,59 @@ export function useSmartFridge() {
   const [loading, setLoading] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const { isAuthenticated } = useAuth();
 
-  // Load data from localStorage on mount
+  // Load data from API on mount
   useEffect(() => {
-    try {
-      const savedProducts = localStorage.getItem(STORAGE_KEYS.FRIDGE_PRODUCTS);
-      if (savedProducts) {
-        setProducts(JSON.parse(savedProducts));
-      } else {
-        // Initialize with default pantry items
-        const defaultProducts = DEFAULT_PANTRY_ITEMS.map((item, index) => ({
-          id: `pantry_${index}`,
-          name: item.name!,
-          category: item.category!,
-          quantity: { amount: 1, unit: "шт" as UnitType },
-          addedDate: new Date().toISOString(),
-          isInPantry: true,
-          nutrition: {
-            calories: 0,
-            protein: 0,
-            fat: 0,
-            carbs: 0
-          }
-        }));
-        setProducts(defaultProducts);
+    if (!isAuthenticated) return;
+
+    const fetchFridgeData = async () => {
+      const token = localStorage.getItem('omomo_auth_token');
+      if (!token) return;
+
+      try {
+        const [fridgeRes, shoppingRes] = await Promise.all([
+          fetch(`${API_BASE}/api/fridge`, { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch(`${API_BASE}/api/shopping`, { headers: { 'Authorization': `Bearer ${token}` } })
+        ]);
+
+        const fridgeData = await fridgeRes.json();
+        const shoppingData = await shoppingRes.json();
+
+        if (fridgeData.products) {
+          setProducts(fridgeData.products.map((p: any) => ({
+            id: p._id,
+            name: p.name,
+            category: p.category,
+            quantity: { amount: p.quantity, unit: p.unit },
+            expiryDate: p.expiryDate,
+            addedDate: p.addedAt,
+            isInPantry: false,
+            barcode: p.barcode,
+            imageUrl: p.imageUrl,
+            nutrition: { calories: 0, protein: 0, fat: 0, carbs: 0 } // Default for now
+          })));
+        }
+
+        if (shoppingData.items) {
+          setShoppingList(shoppingData.items.map((i: any) => ({
+            id: i._id,
+            name: i.name,
+            category: i.category,
+            quantity: { amount: i.amount || 1, unit: i.unit || 'шт' },
+            isCompleted: i.isBought,
+            addedDate: i.createdAt
+          })));
+        }
+      } catch (error) {
+        console.error("Error loading fridge data from API:", error);
       }
+    };
 
-      const savedShoppingList = localStorage.getItem(STORAGE_KEYS.SHOPPING_LIST);
-      if (savedShoppingList) {
-        setShoppingList(JSON.parse(savedShoppingList));
-      }
-    } catch (error) {
-      console.error("Error loading fridge data:", error);
-    }
-  }, []);
+    fetchFridgeData();
+  }, [isAuthenticated]);
 
-  // Save data to localStorage when it changes
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEYS.FRIDGE_PRODUCTS, JSON.stringify(products));
-    } catch (error) {
-      console.error("Error saving fridge data:", error);
-    }
-  }, [products]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEYS.SHOPPING_LIST, JSON.stringify(shoppingList));
-    } catch (error) {
-      console.error("Error saving shopping list:", error);
-    }
-  }, [shoppingList]);
+  // Save data to localStorage is disabled - saving happens directly to API in action functions
 
   // Search products in database
   const searchProducts = useCallback(async (query: string) => {
@@ -115,7 +122,32 @@ export function useSmartFridge() {
       notes: productData.notes
     };
 
-    setProducts(prev => [newProduct, ...prev]);
+    const token = localStorage.getItem('omomo_auth_token');
+    if (token) {
+      fetch(`${API_BASE}/api/fridge`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          name: newProduct.name,
+          category: newProduct.category,
+          quantity: newProduct.quantity.amount,
+          unit: newProduct.quantity.unit,
+          expiryDate: newProduct.expiryDate,
+          barcode: newProduct.barcode,
+          imageUrl: newProduct.imageUrl
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.product) {
+          setProducts(prev => [{...newProduct, id: data.product._id}, ...prev]);
+        }
+      })
+      .catch(console.error);
+    } else {
+      setProducts(prev => [newProduct, ...prev]);
+    }
+    
     toast.success("Продукт додано до холодильника!");
     return newProduct;
   }, []);
@@ -138,27 +170,21 @@ export function useSmartFridge() {
     return addProduct(productData);
   }, [addProduct]);
 
-  // Remove product from fridge
-  const removeProduct = useCallback((productId: string, addToShoppingList?: boolean) => {
+  const removeProduct = useCallback((productId: string, addToShoppingListFlag?: boolean) => {
     const product = products.find(p => p.id === productId);
+    
+    const token = localStorage.getItem('omomo_auth_token');
+    if (token) {
+      fetch(`${API_BASE}/api/fridge/${productId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      }).catch(console.error);
+    }
     
     setProducts(prev => prev.filter(p => p.id !== productId));
     
-    if (product && addToShoppingList) {
-      // Добавляем продукт в список покупок
-      const shoppingItem: ShoppingListItem = {
-        id: crypto.randomUUID(),
-        name: product.name,
-        quantity: { amount: 1, unit: "шт" as UnitType },
-        category: product.category,
-        priority: "medium",
-        isCompleted: false,
-        source: "low_stock",
-        addedDate: new Date().toISOString()
-      };
-      
-      setShoppingList(prev => [shoppingItem, ...prev]);
-      toast.success(`${product.name} додано до списку покупок`);
+    if (product && addToShoppingListFlag) {
+      addToShoppingList(product, "low_stock");
     } else {
       toast.success("Продукт видалено з холодильника");
     }
@@ -166,6 +192,15 @@ export function useSmartFridge() {
 
   // Update product
   const updateProduct = useCallback((productId: string, updates: Partial<SmartFridgeProduct>) => {
+    const token = localStorage.getItem('omomo_auth_token');
+    if (token) {
+      fetch(`${API_BASE}/api/fridge/${productId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(updates)
+      }).catch(console.error);
+    }
+    
     setProducts(prev => prev.map(p => 
       p.id === productId ? { ...p, ...updates } : p
     ));
@@ -199,22 +234,65 @@ export function useSmartFridge() {
       priority: source === "fridge_expired" ? "high" : "medium"
     };
 
-    setShoppingList(prev => [newItem, ...prev]);
+    const token = localStorage.getItem('omomo_auth_token');
+    if (token) {
+      fetch(`${API_BASE}/api/shopping`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          name: newItem.name,
+          category: newItem.category,
+          amount: newItem.quantity.amount,
+          unit: newItem.quantity.unit,
+          isBought: false
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.item) {
+          setShoppingList(prev => [{...newItem, id: data.item._id}, ...prev]);
+        }
+      })
+      .catch(console.error);
+    } else {
+      setShoppingList(prev => [newItem, ...prev]);
+    }
+
     toast.success("Додано до списку покупок");
   }, [shoppingList]);
 
   // Remove from shopping list
   const removeFromShoppingList = useCallback((itemId: string) => {
+    const token = localStorage.getItem('omomo_auth_token');
+    if (token) {
+      fetch(`${API_BASE}/api/shopping/${itemId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      }).catch(console.error);
+    }
+    
     setShoppingList(prev => prev.filter(item => item.id !== itemId));
     toast.success("Видалено зі списку покупок");
   }, []);
 
   // Toggle shopping list item completion
   const toggleShoppingListItem = useCallback((itemId: string) => {
+    const item = shoppingList.find(i => i.id === itemId);
+    if (!item) return;
+    
+    const token = localStorage.getItem('omomo_auth_token');
+    if (token) {
+      fetch(`${API_BASE}/api/shopping/${itemId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ isBought: !item.isCompleted })
+      }).catch(console.error);
+    }
+    
     setShoppingList(prev => prev.map(item => 
       item.id === itemId ? { ...item, isCompleted: !item.isCompleted } : item
     ));
-  }, []);
+  }, [shoppingList]);
 
   // Get recipe matches
   const getRecipeMatches = useCallback(async (): Promise<RecipeMatch[]> => {

@@ -4,7 +4,7 @@ import { RecipeCard } from "./RecipeCard";
 interface RecipeGridProps {
   recipes: Recipe[];
   favorites: number[];
-  onToggleFavorite: (recipeId: number) => void;
+  onToggleFavorite: (recipe: Recipe) => void;
   onOpenDetails: (recipe: Recipe) => void;
   translateRecipeToCyrillic: (recipeName: string) => string;
 }

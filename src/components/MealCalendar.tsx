@@ -6,11 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { useDaily } from "@/hooks/useDaily";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export function MealCalendar() {
   const { user } = useAuth();
   const { entries } = useDaily();
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDay, setSelectedDay] = useState<any | null>(null);
   
   const targetCalories = user?.targets?.calories || 2000;
 
@@ -184,6 +186,7 @@ export function MealCalendar() {
                   isPast && !isToday && "opacity-60"
                 )}
                 title={`${dayNumber} ${monthNames[currentDate.getMonth()]} - ${totals.calories} ккал`}
+                onClick={() => setSelectedDay(day)}
               >
                 {/* Day number */}
                 <span className={cn(
@@ -251,6 +254,68 @@ export function MealCalendar() {
           </div>
         </div>
       </div>
+
+      <Dialog open={!!selectedDay} onOpenChange={(open) => !open && setSelectedDay(null)}>
+        <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedDay ? `${selectedDay.day} ${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}` : 'Деталі дня'}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedDay && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-4 gap-2 text-center text-sm">
+                <div className="p-2 bg-orange-500/10 rounded-lg">
+                  <div className="font-bold text-orange-500">{selectedDay.totals.calories}</div>
+                  <div className="text-xs text-muted-foreground">Ккал</div>
+                </div>
+                <div className="p-2 bg-blue-500/10 rounded-lg">
+                  <div className="font-bold text-blue-500">{selectedDay.totals.protein}г</div>
+                  <div className="text-xs text-muted-foreground">Білки</div>
+                </div>
+                <div className="p-2 bg-yellow-500/10 rounded-lg">
+                  <div className="font-bold text-yellow-500">{selectedDay.totals.fats}г</div>
+                  <div className="text-xs text-muted-foreground">Жири</div>
+                </div>
+                <div className="p-2 bg-green-500/10 rounded-lg">
+                  <div className="font-bold text-green-500">{selectedDay.totals.carbs}г</div>
+                  <div className="text-xs text-muted-foreground">Вуглеводи</div>
+                </div>
+              </div>
+
+              {selectedDay.entries.length > 0 ? (
+                <div className="space-y-3 mt-4">
+                  <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Прийоми їжі</h4>
+                  {selectedDay.entries.map((entry: any, i: number) => (
+                    <div key={i} className="flex justify-between items-center p-3 border rounded-lg bg-card hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <Flame className="w-5 h-5 text-primary" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-sm">{entry.name || 'Прийом їжі'}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {entry.protein}г Б • {entry.fats}г Ж • {entry.carbs}г В
+                          </div>
+                        </div>
+                      </div>
+                      <div className="font-bold text-orange-500 text-sm">
+                        {entry.calories} ккал
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Calendar className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                  <p>Немає записів за цей день</p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

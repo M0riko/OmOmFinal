@@ -1,4 +1,4 @@
-import { Heart, Bookmark, Clock, User, Calendar, Eye } from "lucide-react";
+import { Heart, Bookmark, Clock, User, Calendar, Eye, Trash } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +31,8 @@ interface ArticlesArticleCardProps {
   onLike: (articleId: string) => void;
   onSave: (articleId: string) => void;
   variant?: "default" | "compact" | "featured";
+  canDelete?: boolean;
+  onDelete?: (articleId: string) => void;
 }
 
 export function ArticlesArticleCard({
@@ -40,7 +42,9 @@ export function ArticlesArticleCard({
   onArticleClick,
   onLike,
   onSave,
-  variant = "default"
+  variant = "default",
+  canDelete = false,
+  onDelete
 }: ArticlesArticleCardProps) {
   const getCategoryColor = (categoryId: string) => {
     switch (categoryId) {
@@ -107,6 +111,16 @@ export function ArticlesArticleCard({
                 <div className="flex items-center gap-2">
                   <span>{article.views} переглядів</span>
                   <span className="flex items-center gap-1"><Heart className="w-4 h-4" /> {article.likes}</span>
+                  {canDelete && onDelete && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => { e.stopPropagation(); onDelete(article.id); }}
+                      className="w-6 h-6 text-red-500 hover:text-red-600 hover:bg-red-500/10 ml-2"
+                    >
+                      <Trash className="w-3 h-3" />
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
@@ -211,6 +225,19 @@ export function ArticlesArticleCard({
               >
                 <Bookmark className={cn("w-4 h-4", isSaved ? 'fill-current' : '')} />
               </Button>
+              {canDelete && onDelete && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(article.id);
+                  }}
+                  className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                >
+                  <Trash className="w-4 h-4" />
+                </Button>
+              )}
             </div>
           </div>
         </div>

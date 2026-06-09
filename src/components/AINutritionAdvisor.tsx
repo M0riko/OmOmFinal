@@ -18,7 +18,7 @@ import {
   RefreshCw
 } from "lucide-react";
 import { toast } from "sonner";
-import { getGeminiService, NutritionAdviceRequest, NutritionAdvice } from "@/lib/gemini-ai";
+import { getOpenAIService, NutritionAdviceRequest, NutritionAdvice } from "@/lib/openai-ai";
 import { useDaily } from "@/hooks/useDaily";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -86,7 +86,7 @@ export function AINutritionAdvisor({ onAdviceGenerated }: AINutritionAdvisorProp
 
     setIsGenerating(true);
     try {
-      const geminiService = getGeminiService();
+      const openaiService = getOpenAIService();
       
       // Get recent meals (last 3 meals)
       const recentMeals = entries.slice(-3).map(entry => ({
@@ -116,7 +116,7 @@ export function AINutritionAdvisor({ onAdviceGenerated }: AINutritionAdvisorProp
         dietaryRestrictions
       };
 
-      const nutritionAdvice = await geminiService.getNutritionAdvice(request);
+      const nutritionAdvice = await openaiService.getNutritionAdvice(request);
       setAdvice(nutritionAdvice);
       onAdviceGenerated?.(nutritionAdvice);
       toast.success("Персональные советы готовы!");

@@ -30,7 +30,7 @@ interface AIWorkoutGeneratorProps {
 }
 
 export function AIWorkoutGenerator({ 
-  userGoals = ["Похудение", "Сила"], 
+  userGoals = ["Схуднення", "Сила"], 
   userLevel = "intermediate", 
   availableTime = 45,
   onStartWorkout 
@@ -41,8 +41,8 @@ export function AIWorkoutGenerator({
   const [selectedGoals, setSelectedGoals] = useState<string[]>(userGoals);
 
   const goalOptions = [
-    "Похудение", "Набор мышечной массы", "Сила", "Выносливость", 
-    "Гибкость", "Общая физическая подготовка", "Рельеф"
+    "Схуднення", "Набір м'язової маси", "Сила", "Витривалість", 
+    "Гнучкість", "Загальна фізична підготовка", "Рельєф"
   ];
 
   const generateWorkout = async () => {
@@ -52,19 +52,19 @@ export function AIWorkoutGenerator({
     setTimeout(() => {
       const workout: WorkoutPlan = {
         id: "1",
-        name: "Персональная тренировка",
+        name: "Персональне тренування",
         duration: availableTime,
         difficulty: userLevel as any,
         focus: selectedGoals,
         exercises: [
-          { name: "Приседания", sets: 3, reps: "12-15", rest: 60 },
-          { name: "Отжимания", sets: 3, reps: "8-12", rest: 60 },
+          { name: "Присідання", sets: 3, reps: "12-15", rest: 60 },
+          { name: "Віджимання", sets: 3, reps: "8-12", rest: 60 },
           { name: "Планка", sets: 3, reps: "30-45 сек", rest: 45 },
-          { name: "Выпады", sets: 3, reps: "10-12 на ногу", rest: 60 },
-          { name: "Берпи", sets: 3, reps: "8-10", rest: 90 }
+          { name: "Випади", sets: 3, reps: "10-12 на ногу", rest: 60 },
+          { name: "Берпі", sets: 3, reps: "8-10", rest: 90 }
         ],
         calories: Math.round(availableTime * 8),
-        description: `Тренировка создана на основе ваших целей: ${selectedGoals.join(", ")}. Оптимальная нагрузка для ${userLevel} уровня.`
+        description: `Тренування створено на основі ваших цілей: ${selectedGoals.join(", ")}. Оптимальне навантаження для ${userLevel} рівня.`
       };
       
       setGeneratedWorkout(workout);
@@ -124,7 +124,7 @@ export function AIWorkoutGenerator({
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <Target className="w-5 h-5 text-primary" />
-              <h4 className="font-semibold text-foreground">Выберите цели тренировки</h4>
+              <h4 className="font-semibold text-foreground">Оберіть цілі тренування</h4>
             </div>
             
             <div className="flex flex-wrap gap-2">
@@ -161,12 +161,12 @@ export function AIWorkoutGenerator({
           {isGenerating ? (
             <>
               <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              Генерирую тренировку...
+              Генерую тренування...
             </>
           ) : (
             <>
               <Brain className="w-4 h-4" />
-              Создать персональную тренировку
+              Створити персональне тренування
             </>
           )}
         </Button>
@@ -195,34 +195,34 @@ export function AIWorkoutGenerator({
               <div className="grid grid-cols-3 gap-4">
                 <div className="text-center p-3 bg-muted/20 rounded-lg">
                   <Clock className="w-5 h-5 text-primary mx-auto mb-1" />
-                  <p className="text-sm text-muted-foreground">Время</p>
-                  <p className="font-semibold text-foreground">{generatedWorkout.duration} мин</p>
+                  <p className="text-sm text-muted-foreground">Час</p>
+                  <p className="font-semibold text-foreground">{generatedWorkout.duration} хв</p>
                 </div>
                 <div className="text-center p-3 bg-muted/20 rounded-lg">
                   <Zap className="w-5 h-5 text-orange-500 mx-auto mb-1" />
-                  <p className="text-sm text-muted-foreground">Калории</p>
+                  <p className="text-sm text-muted-foreground">Калорії</p>
                   <p className="font-semibold text-foreground">{generatedWorkout.calories}</p>
                 </div>
                 <div className="text-center p-3 bg-muted/20 rounded-lg">
                   <Dumbbell className="w-5 h-5 text-green-500 mx-auto mb-1" />
-                  <p className="text-sm text-muted-foreground">Упражнения</p>
+                  <p className="text-sm text-muted-foreground">Вправи</p>
                   <p className="font-semibold text-foreground">{generatedWorkout.exercises.length}</p>
                 </div>
               </div>
 
               {/* Exercises List */}
               <div className="space-y-3">
-                <h5 className="font-semibold text-foreground">Упражнения:</h5>
+                <h5 className="font-semibold text-foreground">Вправи:</h5>
                 {generatedWorkout.exercises.map((exercise, index) => (
                   <div key={index} className="flex items-center justify-between p-3 bg-muted/10 rounded-lg">
                     <div>
                       <p className="font-medium text-foreground">{exercise.name}</p>
                       <p className="text-sm text-muted-foreground">
-                        {exercise.sets} подхода по {exercise.reps}
+                        {exercise.sets} підходи по {exercise.reps}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm text-muted-foreground">Отдых</p>
+                      <p className="text-sm text-muted-foreground">Відпочинок</p>
                       <p className="font-medium text-foreground">{exercise.rest}с</p>
                     </div>
                   </div>
@@ -235,7 +235,7 @@ export function AIWorkoutGenerator({
                 className="w-full gap-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
               >
                 <Play className="w-4 h-4" />
-                Начать тренировку
+                Почати тренування
               </Button>
             </div>
           </Card>

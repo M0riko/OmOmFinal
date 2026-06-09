@@ -34,7 +34,7 @@ interface AINutritionPlannerProps {
 }
 
 export function AINutritionPlanner({ 
-  userGoals = ["Похудение"], 
+  userGoals = ["Схуднення"], 
   dietaryRestrictions = [],
   targetCalories = 2000,
   onSavePlan 
@@ -45,13 +45,13 @@ export function AINutritionPlanner({
   const [selectedGoals, setSelectedGoals] = useState<string[]>(userGoals);
 
   const goalOptions = [
-    "Похудение", "Набор веса", "Поддержание веса", "Набор мышечной массы",
-    "Улучшение здоровья", "Повышение энергии", "Детокс"
+    "Схуднення", "Набір ваги", "Підтримка ваги", "Набір м'язової маси",
+    "Покращення здоров'я", "Підвищення енергії", "Детокс"
   ];
 
   const restrictionOptions = [
-    "Вегетарианство", "Веганство", "Без глютена", "Без лактозы", 
-    "Кето", "Палео", "Низкоуглеводная", "Высокобелковая"
+    "Вегетаріанство", "Веганство", "Без глютену", "Без лактози", 
+    "Кето", "Палео", "Низьковуглеводна", "Високобілкова"
   ];
 
   const generateMealPlan = async () => {
@@ -61,46 +61,46 @@ export function AINutritionPlanner({
     setTimeout(() => {
       const plan: MealPlan = {
         id: "1",
-        name: "Персональный план питания",
+        name: "Персональний план харчування",
         meals: [
           {
             type: "breakfast",
-            name: "Овсянка с ягодами и орехами",
+            name: "Вівсянка з ягодами та горіхами",
             calories: 350,
             protein: 12,
             carbs: 45,
             fat: 8,
-            ingredients: ["Овсяные хлопья", "Молоко", "Ягоды", "Грецкие орехи", "Мед"],
+            ingredients: ["Вівсяні пластівці", "Молоко", "Ягоди", "Волоські горіхи", "Мед"],
             prepTime: 10
           },
           {
             type: "lunch",
-            name: "Куриная грудка с овощами",
+            name: "Куряча грудка з овочами",
             calories: 450,
             protein: 35,
             carbs: 25,
             fat: 12,
-            ingredients: ["Куриная грудка", "Брокколи", "Морковь", "Оливковое масло", "Специи"],
+            ingredients: ["Куряча грудка", "Броколі", "Морква", "Оливкова олія", "Спеції"],
             prepTime: 25
           },
           {
             type: "dinner",
-            name: "Лосось с киноа и салатом",
+            name: "Лосось з кіноа та салатом",
             calories: 500,
             protein: 30,
             carbs: 35,
             fat: 20,
-            ingredients: ["Лосось", "Киноа", "Салат", "Авокадо", "Лимон"],
+            ingredients: ["Лосось", "Кіноа", "Салат", "Авокадо", "Лимон"],
             prepTime: 30
           },
           {
             type: "snack",
-            name: "Греческий йогурт с орехами",
+            name: "Грецький йогурт з горіхами",
             calories: 200,
             protein: 15,
             carbs: 12,
             fat: 8,
-            ingredients: ["Греческий йогурт", "Миндаль", "Мед"],
+            ingredients: ["Грецький йогурт", "Мигдаль", "Мед"],
             prepTime: 5
           }
         ],
@@ -108,7 +108,7 @@ export function AINutritionPlanner({
         totalProtein: 92,
         totalCarbs: 117,
         totalFat: 48,
-        description: `План создан для достижения цели: ${selectedGoals.join(", ")}. Сбалансированное питание с оптимальным соотношением БЖУ.`
+        description: `План створено для досягнення цілі: ${selectedGoals.join(", ")}. Збалансоване харчування з оптимальним співвідношенням БЖВ.`
       };
       
       setGeneratedPlan(plan);
@@ -136,11 +136,11 @@ export function AINutritionPlanner({
 
   const getMealTypeLabel = (type: string) => {
     switch (type) {
-      case "breakfast": return "Завтрак";
-      case "lunch": return "Обед";
-      case "dinner": return "Ужин";
+      case "breakfast": return "Сніданок";
+      case "lunch": return "Обід";
+      case "dinner": return "Вечеря";
       case "snack": return "Перекус";
-      default: return "Прием пищи";
+      default: return "Прийом їжі";
     }
   };
 
@@ -159,7 +159,7 @@ export function AINutritionPlanner({
             </div>
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-foreground">{t("aiNutritionPlanner")}</h3>
-              <p className="text-sm text-muted-foreground">Создаю персональное меню на основе ваших целей</p>
+              <p className="text-sm text-muted-foreground">Створюю персональне меню на основі ваших цілей</p>
             </div>
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-green-500" />
@@ -179,7 +179,7 @@ export function AINutritionPlanner({
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <Target className="w-5 h-5 text-green-500" />
-              <h4 className="font-semibold text-foreground">Выберите цели питания</h4>
+              <h4 className="font-semibold text-foreground">Оберіть цілі харчування</h4>
             </div>
             
             <div className="flex flex-wrap gap-2">
@@ -216,12 +216,12 @@ export function AINutritionPlanner({
           {isGenerating ? (
             <>
               <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              Создаю план питания...
+              Створюю план харчування...
             </>
           ) : (
             <>
               <ChefHat className="w-4 h-4" />
-              Создать персональное меню
+              Створити персональне меню
             </>
           )}
         </Button>
@@ -245,29 +245,29 @@ export function AINutritionPlanner({
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center p-3 bg-muted/20 rounded-lg">
                   <Apple className="w-5 h-5 text-red-500 mx-auto mb-1" />
-                  <p className="text-sm text-muted-foreground">Калории</p>
+                  <p className="text-sm text-muted-foreground">Калорії</p>
                   <p className="font-semibold text-foreground">{generatedPlan.totalCalories}</p>
                 </div>
                 <div className="text-center p-3 bg-muted/20 rounded-lg">
                   <Target className="w-5 h-5 text-blue-500 mx-auto mb-1" />
-                  <p className="text-sm text-muted-foreground">Белки</p>
+                  <p className="text-sm text-muted-foreground">Білки</p>
                   <p className="font-semibold text-foreground">{generatedPlan.totalProtein}г</p>
                 </div>
                 <div className="text-center p-3 bg-muted/20 rounded-lg">
                   <TrendingUp className="w-5 h-5 text-green-500 mx-auto mb-1" />
-                  <p className="text-sm text-muted-foreground">Углеводы</p>
+                  <p className="text-sm text-muted-foreground">Вуглеводи</p>
                   <p className="font-semibold text-foreground">{generatedPlan.totalCarbs}г</p>
                 </div>
                 <div className="text-center p-3 bg-muted/20 rounded-lg">
                   <Utensils className="w-5 h-5 text-orange-500 mx-auto mb-1" />
-                  <p className="text-sm text-muted-foreground">Жиры</p>
+                  <p className="text-sm text-muted-foreground">Жири</p>
                   <p className="font-semibold text-foreground">{generatedPlan.totalFat}г</p>
                 </div>
               </div>
 
               {/* Meals List */}
               <div className="space-y-4">
-                <h5 className="font-semibold text-foreground">План питания:</h5>
+                <h5 className="font-semibold text-foreground">План харчування:</h5>
                 {generatedPlan.meals.map((meal, index) => (
                   <div key={index} className="p-4 bg-muted/10 rounded-lg">
                     <div className="flex items-center justify-between mb-3">
@@ -285,28 +285,28 @@ export function AINutritionPlanner({
                         <p className="font-semibold text-foreground">{meal.calories} ккал</p>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                           <Clock className="w-3 h-3" />
-                          {meal.prepTime} мин
+                          {meal.prepTime} хв
                         </div>
                       </div>
                     </div>
                     
                     <div className="grid grid-cols-3 gap-2 mb-3">
                       <div className="text-center p-2 bg-muted/20 rounded">
-                        <p className="text-xs text-muted-foreground">Белки</p>
+                        <p className="text-xs text-muted-foreground">Білки</p>
                         <p className="text-sm font-medium text-foreground">{meal.protein}г</p>
                       </div>
                       <div className="text-center p-2 bg-muted/20 rounded">
-                        <p className="text-xs text-muted-foreground">Углеводы</p>
+                        <p className="text-xs text-muted-foreground">Вуглеводи</p>
                         <p className="text-sm font-medium text-foreground">{meal.carbs}г</p>
                       </div>
                       <div className="text-center p-2 bg-muted/20 rounded">
-                        <p className="text-xs text-muted-foreground">Жиры</p>
+                        <p className="text-xs text-muted-foreground">Жири</p>
                         <p className="text-sm font-medium text-foreground">{meal.fat}г</p>
                       </div>
                     </div>
                     
                     <div>
-                      <p className="text-xs text-muted-foreground mb-1">Ингредиенты:</p>
+                      <p className="text-xs text-muted-foreground mb-1">Інгредієнти:</p>
                       <div className="flex flex-wrap gap-1">
                         {meal.ingredients.map((ingredient, idx) => (
                           <Badge key={idx} variant="outline" className="text-xs">
@@ -325,7 +325,7 @@ export function AINutritionPlanner({
                 className="w-full gap-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
               >
                 <Utensils className="w-4 h-4" />
-                Сохранить план питания
+                Зберегти план харчування
               </Button>
             </div>
           </Card>

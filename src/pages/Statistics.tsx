@@ -1,13 +1,22 @@
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { MobileHeader } from "@/components/MobileHeader";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { HugeiconsIcon } from '@hugeicons/react';
 import { BodyWeightIcon, KitchenUtensilsIcon, Dumbbell03Icon, DropletIcon, Moon02Icon, Download04Icon } from '@hugeicons/core-free-icons';
 import { motion } from "framer-motion";
+import { Loader2 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useDaily } from "@/hooks/useDaily";
+import { useWater } from "@/hooks/useWater";
+import { useWeight } from "@/hooks/useWeight";
+
+const API_BASE = import.meta.env.PROD
+  ? (import.meta.env.VITE_API_BASE_URL && !import.meta.env.VITE_API_BASE_URL.includes('localhost') ? import.meta.env.VITE_API_BASE_URL : '')
+  : (import.meta.env.VITE_API_BASE_URL || '');
 
 // Statistics components
 import { WeightChart } from "@/components/WeightChart";
@@ -29,40 +38,212 @@ export default function Statistics() {
     { id: "sleep", label: "Сон", icon: Moon02Icon },
   ];
 
-  // Mock data for statistics
-  const statisticsData = useMemo(() => ({
-    weight: {
-      current: 70.5,
-      target: 65,
-      history: generateWeightHistory(),
-      trend: -0.3,
-      bmi: 22.1
-    },
-    nutrition: {
-      dailyCalories: 1850,
-      targetCalories: 2000,
-      macros: { protein: 45, carbs: 35, fat: 20 },
-      history: generateNutritionHistory()
-    },
-    workouts: {
-      thisWeek: 4,
-      lastWeek: 3,
-      totalTime: 180,
-      caloriesBurned: 1200,
-      history: generateWorkoutHistory()
-    },
-    water: {
-      today: 2.1,
-      target: 2.5,
-      history: generateWaterHistory()
-    },
-    sleep: {
-      lastNight: 7.5,
-      average: 7.2,
-      target: 8,
-      history: generateSleepHistory()
+  const [statsData, setStatsData] = useState<any>(null);
+  const [isLoadingStats, setIsLoadingStats] = useState<boolean>(true);
+  const { user } = useAuth();
+  const { entries: weightEntries, currentWeight, getWeightTrend } = useWeight();
+  const { totals: dailyTotals } = useDaily();
+  const { waterGoal, todayWater } = useWater();
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const token = localStorage.getItem('omomo_auth_token');
+        if (!token) return;
+        const res = await fetch(`${API_BASE}/api/stats`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setStatsData(data);
+        }
+      } catch (err) {
+        console.error("Error fetching stats:", err);
+      } finally {
+        setIsLoadingStats(false);
+      }
+    };
+    fetchStats();
+  }, []);
+
+  const statisticsData = useMemo(() => {
+    // 1. Weight Data
+    const currentW = currentWeight || user?.weight || 70.0;
+    const targetW = user?.targetWeight || (currentW - 5.0);
+    const bmi = currentW / (((user?.height || 170) / 100) ** 2);
+    
+    // Convert weightEntries to history sorted by date ascending
+    const sortedWeightEntries = [...weightEntries].sort((a, b) => a.date.localeCompare(b.date));
+    const weightHistory = sortedWeightEntries.map(e => ({
+      date: e.date,
+      weight: e.weight
+    }));
+    
+    // If no weight history, seed with current weight
+    if (weightHistory.length === 0) {
+      weightHistory.push({
+        date: new Date().toISOString().split('T')[0],
+        weight: currentW
+      });
     }
-  }), []);
+
+    const rawTrend = getWeightTrend();
+    const trend = rawTrend !== null ? rawTrend : 0;
+
+    // 2. Nutrition Data
+    const dailyCalories = dailyTotals.calories || 0;
+    const targetCalories = user?.calculatedCalories || 2000;
+    
+    // Macros percentages
+    const totalGrams = dailyTotals.protein + dailyTotals.carbs + dailyTotals.fats;
+    const macros = totalGrams > 0 ? {
+      protein: Math.round((dailyTotals.protein / totalGrams) * 100),
+      carbs: Math.round((dailyTotals.carbs / totalGrams) * 100),
+      fat: Math.round((dailyTotals.fats / totalGrams) * 100)
+    } : { protein: 30, carbs: 45, fat: 25 };
+
+    // Nutrition History
+    let historyList = statsData?.history?.stats || [];
+    
+    // Filter out leading empty days to avoid "fake" zeroes before the user started
+    let firstActiveIndex = historyList.findIndex((s: any) => 
+      s.calories > 0 || s.steps > 0 || s.water > 0 || s.sleepHours > 0 || s.weight > 0
+    );
+    if (firstActiveIndex !== -1) {
+      historyList = historyList.slice(firstActiveIndex);
+    } else {
+      historyList = [historyList[historyList.length - 1]].filter(Boolean); // Only today if exists
+    }
+
+    const nutritionHistory = historyList.slice(-8).map((s: any) => ({
+      date: s.date,
+      calories: s.calories || 0,
+      protein: s.protein || 0,
+      carbs: s.carbs || 0,
+      fat: s.fat || 0
+    }));
+
+    // Seed history only if completely empty AND we don't have ANY stats from backend (for new users)
+    if (nutritionHistory.length === 0 && (!historyList || historyList.length === 0)) {
+      nutritionHistory.push({
+        date: new Date().toISOString().split('T')[0],
+        calories: dailyCalories,
+        protein: dailyTotals.protein,
+        carbs: dailyTotals.carbs,
+        fat: dailyTotals.fats
+      });
+    }
+
+    // 3. Workouts Data
+    const workouts = statsData?.history?.workouts || [];
+    let thisWeekWorkouts = 0;
+    let lastWeekWorkouts = 0;
+    let totalTime = 0;
+    let workoutCaloriesBurned = 0;
+
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const fourteenDaysAgo = new Date();
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+
+    const workoutHistoryMap = new Map<string, { duration: number; calories: number }>();
+    
+    // Fill workout history map only with the dates we have in historyList
+    historyList.slice(-14).forEach((s: any) => {
+      workoutHistoryMap.set(s.date, { duration: 0, calories: 0 });
+    });
+
+    workouts.forEach((w: any) => {
+      const wDate = new Date(w.date);
+      if (wDate >= sevenDaysAgo) {
+        thisWeekWorkouts++;
+        workoutCaloriesBurned += w.calories || w.caloriesBurned || 0;
+      } else if (wDate >= fourteenDaysAgo) {
+        lastWeekWorkouts++;
+      }
+      totalTime += w.duration || 0;
+
+      if (workoutHistoryMap.has(w.date)) {
+        const prev = workoutHistoryMap.get(w.date)!;
+        workoutHistoryMap.set(w.date, {
+          duration: prev.duration + (w.duration || 0),
+          calories: prev.calories + (w.calories || w.caloriesBurned || 0)
+        });
+      }
+    });
+
+    const workoutHistory = Array.from(workoutHistoryMap.entries()).map(([date, val]) => ({
+      date,
+      duration: val.duration,
+      calories: val.calories
+    })).sort((a, b) => a.date.localeCompare(b.date));
+
+    // 4. Water Data
+    const waterHistory = historyList.slice(-8).map((s: any) => ({
+      date: s.date,
+      amount: s.water || 0
+    }));
+    // Make sure today has the latest value
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayWaterIdx = waterHistory.findIndex((w: any) => w.date === todayStr);
+    if (todayWaterIdx !== -1) {
+      waterHistory[todayWaterIdx].amount = todayWater;
+    } else {
+      waterHistory.push({ date: todayStr, amount: todayWater });
+    }
+
+    // 5. Sleep Data
+    const sleepHistory = historyList.slice(-8).map((s: any) => ({
+      date: s.date,
+      hours: s.sleepHours || 0
+    }));
+    const todaySleepIdx = sleepHistory.findIndex((s: any) => s.date === todayStr);
+    if (todaySleepIdx !== -1) {
+      sleepHistory[todaySleepIdx].hours = dailyTotals.sleepHours;
+    } else {
+      sleepHistory.push({ date: todayStr, hours: dailyTotals.sleepHours });
+    }
+
+    const sleepLastNight = dailyTotals.sleepHours || (sleepHistory[sleepHistory.length - 1]?.hours) || 0;
+    const activeSleepHours = sleepHistory.filter((s: any) => s.hours > 0);
+    const sleepAverage = activeSleepHours.length > 0
+      ? activeSleepHours.reduce((acc: number, s: any) => acc + s.hours, 0) / activeSleepHours.length
+      : 0;
+
+    return {
+      weight: {
+        current: currentW,
+        target: targetW,
+        history: weightHistory,
+        trend,
+        bmi
+      },
+      nutrition: {
+        dailyCalories,
+        targetCalories,
+        macros,
+        history: nutritionHistory
+      },
+      workouts: {
+        thisWeek: thisWeekWorkouts,
+        lastWeek: lastWeekWorkouts,
+        totalTime,
+        caloriesBurned: workoutCaloriesBurned,
+        history: workoutHistory
+      },
+      water: {
+        today: todayWater,
+        target: waterGoal,
+        history: waterHistory
+      },
+      sleep: {
+        lastNight: sleepLastNight,
+        average: sleepAverage,
+        target: 8.0,
+        history: sleepHistory
+      }
+    };
+  }, [statsData, weightEntries, currentWeight, dailyTotals, waterGoal, todayWater, user]);
 
   const handleExportPDF = () => {
     console.log("Експорт статистики в PDF...");
@@ -78,6 +259,24 @@ export default function Statistics() {
       default: return <WeightChart data={statisticsData.weight} />;
     }
   };
+
+  if (isLoadingStats) {
+    return (
+      <div className="flex min-h-screen w-full bg-background">
+        <DashboardSidebar />
+        <div className="flex-1 min-w-0">
+          <MobileHeader />
+          <div className="flex items-center justify-center h-[calc(100vh-80px)]">
+            <div className="text-center space-y-4">
+              <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto" />
+              <p className="text-muted-foreground animate-pulse font-medium">Завантаження статистики...</p>
+            </div>
+          </div>
+          <MobileBottomNav />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen w-full bg-background">
@@ -143,58 +342,4 @@ export default function Statistics() {
   );
 }
 
-// Mock data generators
-function generateWeightHistory() {
-  const data = [];
-  const today = new Date();
-  for (let i = 30; i >= 0; i--) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - i);
-    data.push({ date: date.toISOString().split('T')[0], weight: 72 - (i * 0.05) + (Math.random() - 0.5) * 0.5 });
-  }
-  return data;
-}
 
-function generateNutritionHistory() {
-  const data = [];
-  const today = new Date();
-  for (let i = 7; i >= 0; i--) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - i);
-    data.push({ date: date.toISOString().split('T')[0], calories: 1800 + Math.random() * 400, protein: 40 + Math.random() * 20, carbs: 35 + Math.random() * 15, fat: 20 + Math.random() * 10 });
-  }
-  return data;
-}
-
-function generateWorkoutHistory() {
-  const data = [];
-  const today = new Date();
-  for (let i = 14; i >= 0; i--) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - i);
-    data.push({ date: date.toISOString().split('T')[0], duration: Math.random() > 0.3 ? 30 + Math.random() * 60 : 0, calories: Math.random() > 0.3 ? 200 + Math.random() * 400 : 0 });
-  }
-  return data;
-}
-
-function generateWaterHistory() {
-  const data = [];
-  const today = new Date();
-  for (let i = 7; i >= 0; i--) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - i);
-    data.push({ date: date.toISOString().split('T')[0], amount: 1.5 + Math.random() * 1.5 });
-  }
-  return data;
-}
-
-function generateSleepHistory() {
-  const data = [];
-  const today = new Date();
-  for (let i = 7; i >= 0; i--) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - i);
-    data.push({ date: date.toISOString().split('T')[0], hours: 6 + Math.random() * 3 });
-  }
-  return data;
-}

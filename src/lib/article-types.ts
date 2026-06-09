@@ -8,6 +8,7 @@ export interface Article {
   contentUk: string;
   author: string;
   authorUk: string;
+  authorId?: string;
   publishedAt: string;
   updatedAt: string;
   category: ArticleCategory;

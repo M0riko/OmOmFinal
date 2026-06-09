@@ -413,7 +413,7 @@ export default function MealPlanNew() {
           <AddMealModal
             open={addMealModalOpen}
             onOpenChange={setAddMealModalOpen}
-            mealType={selectedMealType}
+            presetMealType={selectedMealType}
             onAddMeal={handleMealAdded}
             onAddManual={handleManualMealAdded}
           />

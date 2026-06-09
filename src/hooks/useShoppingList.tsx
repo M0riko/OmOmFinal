@@ -1,6 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSmartFridge } from './useSmartFridge';
 import { useMealPlanner } from './useMealPlanner';
+import { useAuth } from './useAuth';
+
+const API_BASE = import.meta.env.PROD
+  ? (import.meta.env.VITE_API_BASE_URL && !import.meta.env.VITE_API_BASE_URL.includes('localhost') ? import.meta.env.VITE_API_BASE_URL : '')
+  : (import.meta.env.VITE_API_BASE_URL || '');
 
 export interface ShoppingItem {
   id: string;
@@ -67,39 +72,56 @@ export function useShoppingList() {
 
   const { products } = useSmartFridge();
   const { weeklyPlan } = useMealPlanner();
+  const { isAuthenticated } = useAuth();
 
-  // Загрузка данных из localStorage
+  // Загрузка данных из API
   useEffect(() => {
-    try {
-      const savedItems = localStorage.getItem(STORAGE_KEY);
-      if (savedItems) {
-        setItems(JSON.parse(savedItems));
-      }
+    if (!isAuthenticated) return;
+    
+    const token = localStorage.getItem('omomo_auth_token');
+    if (!token) return;
 
+    fetch(`${API_BASE}/api/shopping`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.items) {
+        setItems(data.items.map((i: any) => ({
+          id: i._id,
+          name: i.name,
+          category: i.category || 'other',
+          quantity: i.amount || 1,
+          unit: i.unit || 'шт',
+          priority: 'medium',
+          isCompleted: i.isBought,
+          isAutoAdded: false,
+          source: 'manual',
+          addedDate: i.createdAt,
+          completedDate: i.boughtAt
+        })));
+      }
+    })
+    .catch(console.error);
+    
+    // Load local only categories and stats (could be moved to user settings later)
+    try {
       const savedCategories = localStorage.getItem(CATEGORIES_KEY);
-      if (savedCategories) {
-        setCategories(JSON.parse(savedCategories));
-      }
-
+      if (savedCategories) setCategories(JSON.parse(savedCategories));
       const savedStats = localStorage.getItem(STATS_KEY);
-      if (savedStats) {
-        setStats(JSON.parse(savedStats));
-      }
-    } catch (error) {
-      console.error('Error loading shopping list data:', error);
-    }
-  }, []);
+      if (savedStats) setStats(JSON.parse(savedStats));
+    } catch {}
+  }, [isAuthenticated]);
 
-  // Сохранение данных в localStorage
+  // Сохранение локальных данных (кэш/настройки)
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
       localStorage.setItem(CATEGORIES_KEY, JSON.stringify(categories));
       localStorage.setItem(STATS_KEY, JSON.stringify(stats));
     } catch (error) {
-      console.error('Error saving shopping list data:', error);
+      console.error('Error saving shopping list settings:', error);
     }
-  }, [items, categories, stats]);
+  }, [categories, stats]);
 
   // Обновление статистики
   useEffect(() => {
@@ -149,13 +171,40 @@ export function useShoppingList() {
 
   // Добавление товара вручную
   const addItem = useCallback((item: Omit<ShoppingItem, 'id' | 'addedDate' | 'isCompleted'>) => {
-    const newItem: ShoppingItem = {
-      ...item,
-      id: crypto.randomUUID(),
-      addedDate: new Date().toISOString(),
-      isCompleted: false
-    };
-    setItems(prev => [newItem, ...prev]);
+    const token = localStorage.getItem('omomo_auth_token');
+    if (token) {
+      fetch(`${API_BASE}/api/shopping`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          name: item.name,
+          category: item.category,
+          amount: item.quantity,
+          unit: item.unit,
+          isBought: false
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.item) {
+          setItems(prev => [{
+            ...item,
+            id: data.item._id,
+            addedDate: data.item.createdAt,
+            isCompleted: false
+          }, ...prev]);
+        }
+      })
+      .catch(console.error);
+    } else {
+      const newItem: ShoppingItem = {
+        ...item,
+        id: crypto.randomUUID(),
+        addedDate: new Date().toISOString(),
+        isCompleted: false
+      };
+      setItems(prev => [newItem, ...prev]);
+    }
   }, []);
 
   // Автоматическое добавление из плана питания
@@ -269,6 +318,18 @@ export function useShoppingList() {
 
   // Переключение статуса товара
   const toggleItem = useCallback((id: string) => {
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+    
+    const token = localStorage.getItem('omomo_auth_token');
+    if (token) {
+      fetch(`${API_BASE}/api/shopping/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ isBought: !item.isCompleted, boughtAt: !item.isCompleted ? new Date().toISOString() : null })
+      }).catch(console.error);
+    }
+
     setItems(prev => prev.map(item => 
       item.id === id 
         ? { 
@@ -278,10 +339,18 @@ export function useShoppingList() {
           }
         : item
     ));
-  }, []);
+  }, [items]);
 
   // Удаление товара
   const removeItem = useCallback((id: string) => {
+    const token = localStorage.getItem('omomo_auth_token');
+    if (token) {
+      fetch(`${API_BASE}/api/shopping/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      }).catch(console.error);
+    }
+    
     setItems(prev => prev.filter(item => item.id !== id));
   }, []);
 

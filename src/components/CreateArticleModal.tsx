@@ -134,7 +134,7 @@ export function CreateArticleModal({ onArticleCreated }: CreateArticleModalProps
     return true;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validateForm()) return;
 
     const selectedCategory = allCategories.find(cat => cat.id === formData.category);
@@ -170,13 +170,13 @@ export function CreateArticleModal({ onArticleCreated }: CreateArticleModalProps
       comments: [],
       callToActions: [],
       relatedArticles: [],
-      isPublished: true,
+      isPublished: false,
       isCustom: true,
       createdBy: "user"
     };
 
     // Сохраняем статью
-    createUserArticle(newArticle);
+    await createUserArticle(newArticle);
     onArticleCreated?.(newArticle);
     
     // Сброс формы
@@ -377,13 +377,37 @@ export function CreateArticleModal({ onArticleCreated }: CreateArticleModalProps
                   </div>
                   
                   <div>
-                    <Label htmlFor="imageUrl">URL зображення</Label>
-                    <Input
-                      id="imageUrl"
-                      value={formData.imageUrl}
-                      onChange={(e) => handleInputChange("imageUrl", e.target.value)}
-                      placeholder="https://example.com/image.jpg"
-                    />
+                    <Label htmlFor="imageUrl">Зображення</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="imageUrl"
+                        value={formData.imageUrl}
+                        onChange={(e) => handleInputChange("imageUrl", e.target.value)}
+                        placeholder="URL або завантажте файл"
+                      />
+                      <Label 
+                        htmlFor="imageUpload" 
+                        className="cursor-pointer flex items-center justify-center px-4 py-2 border rounded-md hover:bg-accent"
+                      >
+                        <Upload className="w-4 h-4" />
+                      </Label>
+                      <Input
+                        id="imageUpload"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              handleInputChange("imageUrl", reader.result as string);
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
               </Card>

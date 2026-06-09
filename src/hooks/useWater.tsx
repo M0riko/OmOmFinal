@@ -39,20 +39,33 @@ export function WaterProvider({ children }: { children: React.ReactNode }) {
   const [waterGoal, setWaterGoalState] = useState<number>(2.0);
   const { user, isAuthenticated } = useAuth();
 
-  // Завантаження даних з localStorage
+  // Завантаження даних з API
   useEffect(() => {
     if (!isAuthenticated) {
       setEntries([]);
       setWaterGoalState(2.0);
       return;
     }
-    try {
-      const raw = localStorage.getItem(storageKeyForToday(user?.id));
-      if (raw) {
-        setEntries(JSON.parse(raw));
-      } else {
-        setEntries([]);
-      }
+
+    // Load from database
+    const token = localStorage.getItem('omomo_auth_token');
+    if (token) {
+      const today = new Date().toISOString().split('T')[0];
+      fetch(`${API_BASE}/api/water?date=${today}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.waterLogs) {
+          setEntries(data.waterLogs.map((w: any) => ({
+            id: w._id,
+            date: w.date,
+            amount: w.amount,
+            time: w.time
+          })));
+        }
+      })
+      .catch(console.error);
 
       const savedGoal = localStorage.getItem(getWaterGoalKey(user?.id));
       if (savedGoal) {
@@ -60,23 +73,16 @@ export function WaterProvider({ children }: { children: React.ReactNode }) {
       } else {
         setWaterGoalState(2.0);
       }
-    } catch {}
+    }
   }, [isAuthenticated, user?.id]);
 
-  // Збереження даних в localStorage
-  useEffect(() => {
-    if (isAuthenticated) {
-      try {
-        localStorage.setItem(storageKeyForToday(user?.id), JSON.stringify(entries));
-      } catch {}
-    }
-  }, [entries, isAuthenticated, user?.id]);
+  // Local Storage syncing is removed, relying strictly on DB
 
   const todayWater = useMemo(() => {
     return entries.reduce((sum, entry) => sum + entry.amount, 0);
   }, [entries]);
 
-  // Sync to backend
+  // Sync to backend daily stats
   useEffect(() => {
     const token = localStorage.getItem('omomo_auth_token');
     if (token && isAuthenticated) {
@@ -90,45 +96,78 @@ export function WaterProvider({ children }: { children: React.ReactNode }) {
   }, [todayWater, isAuthenticated]);
 
   const addWater = (amount: number) => {
-
     const now = new Date();
-    const entry: WaterEntry = {
-      id: crypto.randomUUID(),
-      date: now.toISOString().split('T')[0],
-      amount,
-      time: now.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }),
-    };
-    setEntries((prev) => [...prev, entry]);
+    const dateStr = now.toISOString().split('T')[0];
+    const timeStr = now.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+
+    const token = localStorage.getItem('omomo_auth_token');
+    if (isAuthenticated && token) {
+      fetch(`${API_BASE}/api/water`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          date: dateStr,
+          amount,
+          time: timeStr
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.waterLog) {
+          setEntries((prev) => [...prev, {
+            id: data.waterLog._id,
+            date: dateStr,
+            amount,
+            time: timeStr
+          }]);
+        }
+      })
+      .catch(console.error);
+    } else {
+      const entry: WaterEntry = {
+        id: crypto.randomUUID(),
+        date: dateStr,
+        amount,
+        time: timeStr,
+      };
+      setEntries((prev) => [...prev, entry]);
+    }
   };
 
   const removeWater = (id: string) => {
-    setEntries((prev) => prev.filter((e) => e.id !== id));
+    const token = localStorage.getItem('omomo_auth_token');
+    if (isAuthenticated && token) {
+      fetch(`${API_BASE}/api/water/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setEntries((prev) => prev.filter((e) => e.id !== id));
+        }
+      })
+      .catch(console.error);
+    } else {
+      setEntries((prev) => prev.filter((e) => e.id !== id));
+    }
   };
 
   const setWaterGoal = (goal: number) => {
     setWaterGoalState(goal);
-    if (isAuthenticated) {
-      try {
-        localStorage.setItem(getWaterGoalKey(user?.id), goal.toString());
-      } catch {}
-    }
+    try {
+      localStorage.setItem(getWaterGoalKey(user?.id), goal.toString());
+    } catch {}
   };
 
   const getWaterForDate = (date: Date) => {
-    const dateString = date.toISOString().split('T')[0];
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const key = `omomo_water_${user?.id || 'guest'}_${y}-${m}-${day}`;
-    
-    try {
-      const raw = localStorage.getItem(key);
-      if (raw) {
-        const dayEntries: WaterEntry[] = JSON.parse(raw);
-        return dayEntries.reduce((sum, entry) => sum + entry.amount, 0);
-      }
-    } catch {}
-    
+    // В ідеалі повинно братися з бекенду (api/stats history). 
+    // Наразі повертаємо 0 для минулих днів, які не в поточному стані.
     return 0;
   };
 

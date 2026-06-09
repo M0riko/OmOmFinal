@@ -20,7 +20,7 @@ import { useSmartFridge } from "@/hooks/useSmartFridge";
 
 interface PersonalizedRecipesProps {
   favorites: number[];
-  onToggleFavorite: (recipeId: number) => void;
+  onToggleFavorite: (recipe: Recipe) => void;
   onOpenRecipeDetails: (recipe: Recipe) => void;
   translateRecipeToCyrillic: (name: string) => string;
 }
@@ -167,7 +167,7 @@ export function PersonalizedRecipes({
             size="sm"
             variant="secondary"
             className="absolute top-3 right-3 h-9 w-9 p-0 bg-background/80 hover:bg-background shadow-lg"
-            onClick={() => onToggleFavorite(recipe.id)}
+            onClick={() => onToggleFavorite(recipe)}
           >
             <Heart className={`w-4 h-4 ${favorites.includes(recipe.id) ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`} />
           </Button>

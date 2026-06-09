@@ -56,9 +56,7 @@ export function AIInsightsCard({ userData, onActionClick }: AIInsightsCardProps)
         action: aiInsight.type === 'tip' ? t("viewRecipes") : 
                 aiInsight.type === 'motivation' ? t("viewProgress") :
                 aiInsight.type === 'warning' ? t("addWater") : t("viewStatistics"),
-        icon: aiInsight.type === 'tip' ? Lightbulb :
-              aiInsight.type === 'motivation' ? TrendingUp :
-              aiInsight.type === 'warning' ? Heart : Target,
+        icon: null, // Will determine dynamically on render
         color: aiInsight.type === 'tip' ? "from-yellow-500 to-orange-500" :
                aiInsight.type === 'motivation' ? "from-green-500 to-emerald-500" :
                aiInsight.type === 'warning' ? "from-blue-500 to-cyan-500" : "from-purple-500 to-violet-500",
@@ -73,13 +71,32 @@ export function AIInsightsCard({ userData, onActionClick }: AIInsightsCardProps)
   };
 
   useEffect(() => {
-    // Отримуємо AI пораду
     const loadInsight = async () => {
+      // Check cache first
+      const today = new Date().toISOString().split('T')[0];
+      const cacheKey = `omomo_ai_insight_${today}`;
+      const cached = localStorage.getItem(cacheKey);
+      
+      if (cached) {
+        try {
+          setCurrentInsight(JSON.parse(cached));
+          return;
+        } catch (e) {
+          console.error("Failed to parse cached insight", e);
+        }
+      }
+
       const insight = await generateInsight();
-      setCurrentInsight(insight);
+      if (insight) {
+        setCurrentInsight(insight);
+        localStorage.setItem(cacheKey, JSON.stringify(insight));
+      }
     };
     
-    loadInsight();
+    // Only load if we don't have an insight yet
+    if (!currentInsight) {
+      loadInsight();
+    }
   }, [totals.calories, totals.water, user?.sleep, user?.weight, user?.goals]);
 
   const handleActionClick = () => {
@@ -112,7 +129,9 @@ export function AIInsightsCard({ userData, onActionClick }: AIInsightsCardProps)
 
   if (!currentInsight) return null;
 
-  const IconComponent = currentInsight.icon;
+  const IconComponent = currentInsight.type === 'tip' ? Lightbulb :
+                        currentInsight.type === 'motivation' ? TrendingUp :
+                        currentInsight.type === 'warning' ? Heart : Target;
 
   return (
     <motion.div

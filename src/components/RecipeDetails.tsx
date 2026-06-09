@@ -26,7 +26,7 @@ type RecipeDetailsProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   isFavorite: boolean;
-  onToggleFavorite: (recipeId: number) => void;
+  onToggleFavorite: (recipe: Recipe) => void;
 };
 
 // Translation function for ingredients and instructions
@@ -287,7 +287,7 @@ export function RecipeDetails({ recipe, open, onOpenChange, isFavorite, onToggle
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => onToggleFavorite(fullRecipe.id)}
+                onClick={() => onToggleFavorite(fullRecipe as Recipe)}
                 className={`gap-1 ${isFavorite ? 'text-red-500 border-red-200' : ''}`}
               >
                 <Heart className={`w-4 h-4 ${isFavorite ? 'fill-red-500' : ''}`} />

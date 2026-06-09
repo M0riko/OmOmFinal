@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { useAchievements } from "@/hooks/useAchievements";
+import { getDaysPlural } from "./DashboardHeader";
 
 interface MotivationBannerProps {
   streakDays?: number;
@@ -36,7 +37,7 @@ export function MotivationBanner({
       return {
         title: "Ви на серії!",
         icon: FireIcon,
-        message: `${streakDays} днів поспіль! Тримайте ритм!`,
+        message: `${getDaysPlural(streakDays)} поспіль! Тримайте ритм!`,
         accentClass: "bg-warning/5 border-warning/15",
         iconBg: "bg-warning/10",
         iconColor: "text-warning"
@@ -96,7 +97,7 @@ export function MotivationBanner({
             {streakDays > 0 && (
               <Badge className="bg-primary/10 text-primary border border-primary/20 rounded-full">
                 <HugeiconsIcon icon={FireIcon} size={14} className="mr-1" />
-                {streakDays} днів
+                {getDaysPlural(streakDays)}
               </Badge>
             )}
             

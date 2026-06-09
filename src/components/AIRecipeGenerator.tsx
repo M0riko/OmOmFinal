@@ -25,7 +25,7 @@ import {
   RefreshCw
 } from "lucide-react";
 import { toast } from "sonner";
-import { getGeminiService, RecipeRequest, GeneratedRecipe } from "@/lib/gemini-ai";
+import { getOpenAIService, RecipeRequest, GeneratedRecipe } from "@/lib/openai-ai";
 import { useSmartFridge } from "@/hooks/useSmartFridge";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -130,7 +130,7 @@ export function AIRecipeGenerator({ onRecipeGenerated, onAddToFavorites }: AIRec
 
     setIsGenerating(true);
     try {
-      const geminiService = getGeminiService();
+      const openaiService = getOpenAIService();
       
       const request: RecipeRequest = {
         ingredients: selectedIngredients,
@@ -143,7 +143,7 @@ export function AIRecipeGenerator({ onRecipeGenerated, onAddToFavorites }: AIRec
         cuisine: cuisine || undefined
       };
 
-      const recipe = await geminiService.generateRecipe(request);
+      const recipe = await openaiService.generateRecipe(request);
       setGeneratedRecipe(recipe);
       onRecipeGenerated?.(recipe);
       toast.success("Рецепт успешно сгенерирован!");

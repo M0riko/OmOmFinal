@@ -27,17 +27,14 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmailSent, setResetEmailSent] = useState(false);
 
   // Проверяем, нужно ли показать онбординг для уже авторизованного пользователя
   useEffect(() => {
     if (isAuthenticated && user) {
       const isOnboardingComplete = () => {
-        try {
-          const profileData = localStorage.getItem("omom_profile_extra");
-          return !!profileData;
-        } catch {
-          return false;
-        }
+        return !!user.onboardingCompleted;
       };
 
       console.log("Auth: User authenticated, checking onboarding status");
@@ -145,6 +142,34 @@ export default function AuthPage() {
     }
   }
 
+  async function handleForgotPassword() {
+    if (!email) {
+      toast.error("Будь ласка, введіть свій email");
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+      });
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || "Помилка сервера");
+      }
+      
+      setResetEmailSent(true);
+      toast.success("Посилання для відновлення паролю надіслано на ваш email");
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   async function handleAppleLogin() {
     // В реальном приложении здесь будет интеграция с Apple Sign In
     toast.info("Apple Sign In буде доступний найближчим часом");
@@ -197,10 +222,10 @@ export default function AuthPage() {
       // Очищаем временные данные Google
       localStorage.removeItem("omom_google_user_data");
 
-      // Persist age/weight/height to backend
+      // Persist age/weight/height/onboarding to backend
       const token = localStorage.getItem('omomo_auth_token');
       if (token) {
-        fetch(`${API_BASE}/api/user/me`, {
+        const onboardingResponse = await fetch(`${API_BASE}/api/user/onboarding`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({
@@ -208,8 +233,20 @@ export default function AuthPage() {
             age: age || 25,
             weight: weight || 70,
             height: height || 170,
+            gender: gender || 'male',
+            goal: goal || 'weight_maintenance',
+            activityLevel: onboardingData.activityLevel || 'moderate',
+            targetWeight: targetWeight,
+            workoutDaysPerWeek: workoutDaysPerWeek || 3,
+            workoutDuration: workoutDuration || 45,
+            calculatedCalories: calculatedCalories || 2000,
+            settings: { language, theme, units, notifications, reminderTimes }
           })
-        }).catch(console.error);
+        });
+
+        if (!onboardingResponse.ok) {
+          console.error("Backend onboarding failed:", await onboardingResponse.text());
+        }
       }
 
       // Обновляем пользователя с финальными данными
@@ -218,12 +255,16 @@ export default function AuthPage() {
         const updatedUser = {
           ...user,
           name: name || user.name,
+          age: age || user.age,
+          weight: weight || user.weight,
+          height: height || user.height,
           targets: { 
             calories: calculatedCalories || 2000, 
             protein: Math.round((calculatedCalories || 2000) * 0.25 / 4), 
             fats: Math.round((calculatedCalories || 2000) * 0.25 / 9), 
             carbs: Math.round((calculatedCalories || 2000) * 0.5 / 4) 
-          }
+          },
+          onboardingCompleted: true
         };
         
         // Обновляем пользователя через updateUser
@@ -256,15 +297,55 @@ export default function AuthPage() {
     }
   }
 
-  function handleOnboardingSkip() {
+  async function handleOnboardingSkip() {
     // Очищаем временные данные Google
     localStorage.removeItem("omom_google_user_data");
     
-    // Создаем пользователя с базовыми данными
+    // Сохраняем базовые настройки в локальное хранилище
+    localStorage.setItem("omom_profile_extra", JSON.stringify({
+      name: user?.name || pendingUserData?.name || email.split("@")[0] || "Користувач",
+      goal: 'weight_maintenance',
+      gender: 'male',
+      age: 25,
+      height: 170,
+      weight: 70,
+      calculatedCalories: 2000,
+      targetWeight: 65,
+      workoutDaysPerWeek: 3,
+      workoutDuration: 45
+    }));
+
+    const token = localStorage.getItem('omomo_auth_token');
+    if (token) {
+      try {
+        await fetch(`${API_BASE}/api/user/onboarding`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({
+            username: user?.name || pendingUserData?.name || email.split("@")[0] || "Користувач",
+            age: 25,
+            weight: 70,
+            height: 170,
+            gender: 'male',
+            goal: 'weight_maintenance',
+            activityLevel: 'moderate',
+            targetWeight: 65,
+            workoutDaysPerWeek: 3,
+            workoutDuration: 45,
+            calculatedCalories: 2000,
+            onboardingCompleted: true,
+            settings: { language: "uk", theme: "system", units: { weight: "kg", height: "cm", temperature: "celsius" } }
+          })
+        });
+      } catch (e) {
+        console.error("Failed to save skipped onboarding:", e);
+      }
+    }
+
     if (user) {
-      // Если пользователь уже создан, обновляем его
       updateUser({
         ...user,
+        onboardingCompleted: true,
         targets: { 
           calories: 2000, 
           protein: 120, 
@@ -273,7 +354,6 @@ export default function AuthPage() {
         }
       });
     } else {
-      // Если пользователь не создан, создаем его
       completeRegistration(pendingUserData?.email || email, {
         name: pendingUserData?.name || pendingUserData?.email?.split("@")[0] || "Користувач",
         calculatedCalories: 2000
@@ -288,11 +368,11 @@ export default function AuthPage() {
     try { 
       sessionStorage.setItem("omom_post_login", "/"); 
       console.log("Auth: Set post-login redirect to / (skip)");
-        // Небольшая задержка для завершения обновления состояния
-        setTimeout(() => {
-          console.log("Auth: Redirecting to home page (skip)");
-          navigate("/", { replace: true });
-        }, 100);
+      // Небольшая задержка для завершения обновления состояния
+      setTimeout(() => {
+        console.log("Auth: Redirecting to home page (skip)");
+        navigate("/", { replace: true });
+      }, 100);
     } catch {}
   }
 
@@ -470,6 +550,51 @@ export default function AuthPage() {
                     </TabsTrigger>
                   </TabsList>
 
+                {showForgotPassword ? (
+                  <div className="mt-6 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-medium">Відновлення паролю</h3>
+                      <p className="text-sm text-muted-foreground">Введіть email, пов'язаний з вашим акаунтом, і ми надішлемо вам посилання для зміни паролю.</p>
+                    </div>
+
+                    {!resetEmailSent ? (
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium text-foreground">Email</Label>
+                          <Input 
+                            placeholder="you@example.com" 
+                            type="email" 
+                            value={email} 
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="h-12 text-base border-2 focus:border-primary/50 transition-colors"
+                          />
+                        </div>
+                        <Button 
+                          className="w-full h-12" 
+                          onClick={handleForgotPassword} 
+                          disabled={isLoading || !email}
+                        >
+                          {isLoading ? "Надсилання..." : "Надіслати посилання"}
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg text-center space-y-2">
+                        <Check className="w-8 h-8 text-green-500 mx-auto" />
+                        <p className="font-medium text-green-600">Лист надіслано!</p>
+                        <p className="text-sm text-muted-foreground">Перевірте свою пошту та перейдіть за посиланням для створення нового паролю.</p>
+                      </div>
+                    )}
+                    
+                    <Button 
+                      variant="ghost" 
+                      className="w-full text-sm" 
+                      onClick={() => { setShowForgotPassword(false); setResetEmailSent(false); }}
+                    >
+                      Повернутися до входу
+                    </Button>
+                  </div>
+                ) : (
+                  <>
                 {/* Login */}
                 <TabsContent value="login" className="mt-6 space-y-6">
                   <Button 
@@ -538,6 +663,15 @@ export default function AuthPage() {
                           Мінімум 6 символів
                         </div>
                       )}
+                      <div className="flex justify-end pt-1">
+                        <button 
+                          type="button" 
+                          onClick={() => setShowForgotPassword(true)}
+                          className="text-xs font-medium text-primary hover:underline"
+                        >
+                          Забули пароль?
+                        </button>
+                      </div>
                     </div>
                   </div>
                   
@@ -710,6 +844,8 @@ export default function AuthPage() {
                     </div>
                   </div>
                 </TabsContent>
+                </>
+                )}
               </Tabs>
               </div>
             </Card>

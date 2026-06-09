@@ -9,15 +9,8 @@ const FATSECRET_CLIENT_SECRET = "c09fe9f970f94835ba1a355241eecc77";
 const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
 const isVercel = window.location.hostname.includes('vercel.app');
 
-// Determine the correct API URL
-let FATSECRET_BASE_URL;
-if (isVercel || isProduction) {
-  // On Vercel or production, use the API route
-  FATSECRET_BASE_URL = "/api/fatsecret";
-} else {
-  // Local development, use separate API server
-  FATSECRET_BASE_URL = "http://localhost:3000/api/fatsecret";
-}
+// Determine the correct API URL - in development Vite proxies /api to http://localhost:3000
+const FATSECRET_BASE_URL = "/api/fatsecret";
 
 // Cache configuration
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes

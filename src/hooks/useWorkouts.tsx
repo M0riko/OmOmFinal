@@ -46,7 +46,7 @@ export function useWorkouts() {
   
   const { user, isAuthenticated } = useAuth();
 
-  // Загрузка данных из localStorage и API
+  // Загрузка данных из API
   useEffect(() => {
     if (!isAuthenticated) {
       setPlannedWorkouts([]);
@@ -58,156 +58,30 @@ export function useWorkouts() {
       return;
     }
 
-    try {
-      const savedPlanned = localStorage.getItem(getStorageKey(STORAGE_KEYS.PLANNED_WORKOUTS, user?.id));
-      if (savedPlanned) {
-        setPlannedWorkouts(JSON.parse(savedPlanned));
-      } else {
-        setPlannedWorkouts([]);
-      }
-
-      const savedRecords = localStorage.getItem(getStorageKey(STORAGE_KEYS.PERSONAL_RECORDS, user?.id));
-      if (savedRecords) {
-        setPersonalRecords(JSON.parse(savedRecords));
-      } else {
-        setPersonalRecords([]);
-      }
-
-      const savedGoals = localStorage.getItem(getStorageKey(STORAGE_KEYS.WORKOUT_GOALS, user?.id));
-      if (savedGoals) {
-        setWorkoutGoals(JSON.parse(savedGoals));
-      } else {
-        setWorkoutGoals([]);
-      }
-
-      const savedCustomExercises = localStorage.getItem(getStorageKey(STORAGE_KEYS.CUSTOM_EXERCISES, user?.id));
-      if (savedCustomExercises) {
-        setCustomExercises(JSON.parse(savedCustomExercises));
-      } else {
-        setCustomExercises([]);
-      }
-
-      const savedCustomPrograms = localStorage.getItem(getStorageKey(STORAGE_KEYS.CUSTOM_PROGRAMS, user?.id));
-      if (savedCustomPrograms) {
-        setCustomPrograms(JSON.parse(savedCustomPrograms));
-      } else {
-        setCustomPrograms([]);
-      }
-
-      // Load completed workouts from local, then merge missing ones from backend
-      let localCompleted: CompletedWorkout[] = [];
-      const savedCompleted = localStorage.getItem(getStorageKey(STORAGE_KEYS.COMPLETED_WORKOUTS, user?.id));
-      if (savedCompleted) {
-        localCompleted = JSON.parse(savedCompleted);
-      }
-      
-      setCompletedWorkouts(localCompleted);
-
-      // Fetch from backend API to get cross-device workout history
-      const token = localStorage.getItem('omomo_auth_token');
-      if (token) {
-        fetch(`${API_BASE}/api/stats`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-        .then(res => res.json())
-        .then(data => {
-          if (data.history && data.history.workouts) {
-            const backendWorkouts = data.history.workouts || [];
-            
-            setCompletedWorkouts(prev => {
-              // Create a set of dates/types already in local storage to avoid duplicates
-              const existingKeys = new Set(prev.map(w => `${w.startTime.split('T')[0]}_${w.name}`));
-              
-              const newFromBackend = backendWorkouts
-                .filter((bw: any) => !existingKeys.has(`${bw.date}_${bw.workoutType}`))
-                .map((bw: any) => ({
-                  id: bw._id,
-                  plannedWorkoutId: '',
-                  name: bw.workoutType,
-                  exercises: [], // Basic backend schema doesn't have exercises
-                  startTime: bw.date + 'T12:00:00.000Z', // Rough estimation from date
-                  endTime: bw.date + 'T13:00:00.000Z',
-                  duration: bw.duration,
-                  totalVolume: 0,
-                  personalRecords: [],
-                  rating: 0
-                }));
-                
-              if (newFromBackend.length > 0) {
-                return [...newFromBackend, ...prev].sort((a,b) => new Date(b.endTime).getTime() - new Date(a.endTime).getTime());
-              }
-              return prev;
-            });
-          }
-        })
-        .catch(console.error);
-      }
-
-    } catch (error) {
-      console.error('Error loading workout data:', error);
+    // Load from database
+    const token = localStorage.getItem('omomo_auth_token');
+    if (token) {
+      Promise.all([
+        fetch(`${API_BASE}/api/workouts/planned`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.json()),
+        fetch(`${API_BASE}/api/workouts/completed`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.json()),
+        fetch(`${API_BASE}/api/workouts/records`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.json()),
+        fetch(`${API_BASE}/api/workouts/goals`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.json()),
+        fetch(`${API_BASE}/api/workouts/exercises`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.json()),
+        fetch(`${API_BASE}/api/workouts/programs`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.json())
+      ])
+      .then(([plannedData, completedData, recordsData, goalsData, exercisesData, programsData]) => {
+        if (plannedData.planned) setPlannedWorkouts(plannedData.planned.map((w: any) => ({ id: w._id, ...w })));
+        if (completedData.completed) setCompletedWorkouts(completedData.completed.map((w: any) => ({ id: w._id, ...w })));
+        if (recordsData.records) setPersonalRecords(recordsData.records.map((r: any) => ({ id: r._id, ...r })));
+        if (goalsData.goals) setWorkoutGoals(goalsData.goals.map((g: any) => ({ id: g._id, ...g })));
+        if (exercisesData.exercises) setCustomExercises(exercisesData.exercises.map((e: any) => ({ id: e._id, ...e })));
+        if (programsData.programs) setCustomPrograms(programsData.programs.map((p: any) => ({ id: p._id, ...p })));
+      })
+      .catch(console.error);
     }
   }, [isAuthenticated, user?.id]);
 
-  // Сохранение данных в localStorage
-  useEffect(() => {
-    if (isAuthenticated) {
-      try {
-        localStorage.setItem(getStorageKey(STORAGE_KEYS.PLANNED_WORKOUTS, user?.id), JSON.stringify(plannedWorkouts));
-      } catch (error) {
-        console.error('Error saving planned workouts:', error);
-      }
-    }
-  }, [plannedWorkouts, isAuthenticated, user?.id]);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      try {
-        localStorage.setItem(getStorageKey(STORAGE_KEYS.COMPLETED_WORKOUTS, user?.id), JSON.stringify(completedWorkouts));
-      } catch (error) {
-        console.error('Error saving completed workouts:', error);
-      }
-    }
-  }, [completedWorkouts, isAuthenticated, user?.id]);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      try {
-        localStorage.setItem(getStorageKey(STORAGE_KEYS.PERSONAL_RECORDS, user?.id), JSON.stringify(personalRecords));
-      } catch (error) {
-        console.error('Error saving personal records:', error);
-      }
-    }
-  }, [personalRecords, isAuthenticated, user?.id]);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      try {
-        localStorage.setItem(getStorageKey(STORAGE_KEYS.WORKOUT_GOALS, user?.id), JSON.stringify(workoutGoals));
-      } catch (error) {
-        console.error('Error saving workout goals:', error);
-      }
-    }
-  }, [workoutGoals, isAuthenticated, user?.id]);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      try {
-        localStorage.setItem(getStorageKey(STORAGE_KEYS.CUSTOM_EXERCISES, user?.id), JSON.stringify(customExercises));
-      } catch (error) {
-        console.error('Error saving custom exercises:', error);
-      }
-    }
-  }, [customExercises, isAuthenticated, user?.id]);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      try {
-        localStorage.setItem(getStorageKey(STORAGE_KEYS.CUSTOM_PROGRAMS, user?.id), JSON.stringify(customPrograms));
-      } catch (error) {
-        console.error('Error saving custom programs:', error);
-      }
-    }
-  }, [customPrograms, isAuthenticated, user?.id]);
+  // Сохранение данных в localStorage відключено, працюємо з БД
 
   // Получение всех упражнений (встроенные + пользовательские)
   const allExercises = useMemo(() => {
@@ -221,13 +95,30 @@ export function useWorkouts() {
 
   // Планирование тренировки
   const planWorkout = useCallback((workout: Omit<PlannedWorkout, 'id'>) => {
-    const newWorkout: PlannedWorkout = {
-      ...workout,
-      id: crypto.randomUUID()
-    };
-    setPlannedWorkouts(prev => [...prev, newWorkout]);
-    toast.success('Тренування заплановано!');
-  }, []);
+    const token = localStorage.getItem('omomo_auth_token');
+    if (isAuthenticated && token) {
+      fetch(`${API_BASE}/api/workouts/planned`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(workout)
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.planned) {
+          setPlannedWorkouts(prev => [...prev, { id: data.planned._id, ...data.planned }]);
+          toast.success('Тренування заплановано!');
+        }
+      })
+      .catch(console.error);
+    } else {
+      const newWorkout: PlannedWorkout = {
+        ...workout,
+        id: crypto.randomUUID()
+      };
+      setPlannedWorkouts(prev => [...prev, newWorkout]);
+      toast.success('Тренування заплановано!');
+    }
+  }, [isAuthenticated]);
 
   // Планирование тренировки из программы
   const planWorkoutFromProgram = useCallback((programId: string, dayId: string, scheduledDate: string) => {
@@ -243,8 +134,7 @@ export function useWorkouts() {
       return;
     }
 
-    const plannedWorkout: PlannedWorkout = {
-      id: crypto.randomUUID(),
+    const plannedWorkout = {
       programId,
       dayId,
       name: day.nameUk,
@@ -256,9 +146,8 @@ export function useWorkouts() {
       isCompleted: false
     };
 
-    setPlannedWorkouts(prev => [...prev, plannedWorkout]);
-    toast.success(`Тренування "${day.nameUk}" заплановано!`);
-  }, []);
+    planWorkout(plannedWorkout);
+  }, [planWorkout]);
 
   // Начало тренировки (Live режим)
   const startWorkout = useCallback((workoutId: string) => {
@@ -299,8 +188,8 @@ export function useWorkouts() {
     if (!currentWorkout) return;
 
     const endTime = new Date().toISOString();
-    const startTime = new Date().toISOString(); // В реальном приложении это должно быть время начала
-    const duration = Math.floor((new Date(endTime).getTime() - new Date(startTime).getTime()) / 60000);
+    const startTime = new Date().toISOString();
+    const duration = Math.max(15, Math.floor((new Date(endTime).getTime() - new Date(startTime).getTime()) / 60000)) || 45;
 
     // Подсчет общего объема
     const totalVolume = currentWorkout.exercises.reduce((total, exercise) => {
@@ -312,9 +201,8 @@ export function useWorkouts() {
     // Проверка на личные рекорды
     const newRecords: PersonalRecord[] = [];
     currentWorkout.exercises.forEach(exercise => {
-      const maxWeight = Math.max(...exercise.sets.map(set => set.weight));
-      const maxReps = Math.max(...exercise.sets.map(set => set.reps));
-      const maxVolume = Math.max(...exercise.sets.map(set => set.weight * set.reps));
+      const maxWeight = Math.max(...exercise.sets.map(set => set.weight), 0);
+      const maxReps = Math.max(...exercise.sets.map(set => set.reps), 0);
 
       // Проверяем рекорды по весу
       const existingWeightRecord = personalRecords.find(record => 
@@ -351,8 +239,7 @@ export function useWorkouts() {
       }
     });
 
-    const completedWorkout: CompletedWorkout = {
-      id: crypto.randomUUID(),
+    const completedWorkoutObj = {
       plannedWorkoutId: currentWorkout.id,
       name: currentWorkout.name,
       exercises: currentWorkout.exercises,
@@ -361,32 +248,58 @@ export function useWorkouts() {
       duration,
       totalVolume,
       personalRecords: newRecords,
-      rating: 0
+      rating: 5
     };
 
     // Sync workout to backend
     const token = localStorage.getItem('omomo_auth_token');
     if (token && isAuthenticated) {
-      fetch(`${API_BASE}/api/workout`, {
+      // 1. Save completed workout
+      fetch(`${API_BASE}/api/workouts/completed`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ 
-          workoutType: currentWorkout.name,
-          duration,
-          caloriesBurned: duration * 5,
-          date: startTime.split('T')[0]
-        })
-      }).catch(console.error);
-    }
+        body: JSON.stringify(completedWorkoutObj)
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.completed) {
+          const completedWorkout = { id: data.completed._id, ...data.completed };
+          setCompletedWorkouts(prev => [completedWorkout, ...prev].sort((a,b) => new Date(b.endTime).getTime() - new Date(a.endTime).getTime()));
+          
+          // Save personal records
+          newRecords.forEach(rec => {
+            fetch(`${API_BASE}/api/workouts/records`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              body: JSON.stringify(rec)
+            }).catch(console.error);
+          });
 
-    // Обновляем данные
-    setCompletedWorkouts(prev => [completedWorkout, ...prev].sort((a,b) => new Date(b.endTime).getTime() - new Date(a.endTime).getTime()));
-    setPersonalRecords(prev => [...prev, ...newRecords]);
-    setPlannedWorkouts(prev => prev.map(w => 
-      w.id === currentWorkout.id 
-        ? { ...w, isCompleted: true, completedDate: endTime }
-        : w
-    ));
+          // Mark planned workout as completed
+          if (currentWorkout.id && !currentWorkout.id.includes('-')) {
+            fetch(`${API_BASE}/api/workouts/planned/${currentWorkout.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              body: JSON.stringify({ isCompleted: true, completedDate: endTime })
+            }).catch(console.error);
+          }
+        }
+      })
+      .catch(console.error);
+    } else {
+      // Guest
+      const completedWorkout: CompletedWorkout = {
+        id: crypto.randomUUID(),
+        ...completedWorkoutObj
+      };
+      setCompletedWorkouts(prev => [completedWorkout, ...prev].sort((a,b) => new Date(b.endTime).getTime() - new Date(a.endTime).getTime()));
+      setPersonalRecords(prev => [...prev, ...newRecords]);
+      setPlannedWorkouts(prev => prev.map(w => 
+        w.id === currentWorkout.id 
+          ? { ...w, isCompleted: true, completedDate: endTime }
+          : w
+      ));
+    }
 
     // Выходим из Live режима
     setIsLiveMode(false);
@@ -404,43 +317,127 @@ export function useWorkouts() {
 
   // Удаление запланированной тренировки
   const removePlannedWorkout = useCallback((workoutId: string) => {
-    setPlannedWorkouts(prev => prev.filter(w => w.id !== workoutId));
-    toast.success('Тренування видалено з плану');
-  }, []);
+    const token = localStorage.getItem('omomo_auth_token');
+    if (token && isAuthenticated && !workoutId.includes('-')) {
+      fetch(`${API_BASE}/api/workouts/planned/${workoutId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setPlannedWorkouts(prev => prev.filter(w => w.id !== workoutId));
+          toast.success('Тренування видалено з плану');
+        }
+      })
+      .catch(console.error);
+    } else {
+      setPlannedWorkouts(prev => prev.filter(w => w.id !== workoutId));
+      toast.success('Тренування видалено з плану');
+    }
+  }, [isAuthenticated]);
 
   // Добавление цели
   const addWorkoutGoal = useCallback((goal: Omit<WorkoutGoal, 'id'>) => {
-    const newGoal: WorkoutGoal = {
-      ...goal,
-      id: crypto.randomUUID()
-    };
-    setWorkoutGoals(prev => [...prev, newGoal]);
-    toast.success('Ціль додано!');
-  }, []);
+    const token = localStorage.getItem('omomo_auth_token');
+    if (token && isAuthenticated) {
+      fetch(`${API_BASE}/api/workouts/goals`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(goal)
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.goal) {
+          setWorkoutGoals(prev => [...prev, { id: data.goal._id, ...data.goal }]);
+          toast.success('Ціль додано!');
+        }
+      })
+      .catch(console.error);
+    } else {
+      const newGoal: WorkoutGoal = {
+        ...goal,
+        id: crypto.randomUUID()
+      };
+      setWorkoutGoals(prev => [...prev, newGoal]);
+      toast.success('Ціль додано!');
+    }
+  }, [isAuthenticated]);
 
   // Обновление цели
   const updateWorkoutGoal = useCallback((goalId: string, updates: Partial<WorkoutGoal>) => {
-    setWorkoutGoals(prev => prev.map(goal => 
-      goal.id === goalId ? { ...goal, ...updates } : goal
-    ));
-  }, []);
+    const token = localStorage.getItem('omomo_auth_token');
+    if (token && isAuthenticated && !goalId.includes('-')) {
+      fetch(`${API_BASE}/api/workouts/goals/${goalId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(updates)
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.goal) {
+          setWorkoutGoals(prev => prev.map(goal => 
+            goal.id === goalId ? { ...goal, ...updates } : goal
+          ));
+        }
+      })
+      .catch(console.error);
+    } else {
+      setWorkoutGoals(prev => prev.map(goal => 
+        goal.id === goalId ? { ...goal, ...updates } : goal
+      ));
+    }
+  }, [isAuthenticated]);
 
   // Удаление цели
   const removeWorkoutGoal = useCallback((goalId: string) => {
-    setWorkoutGoals(prev => prev.filter(goal => goal.id !== goalId));
-    toast.success('Ціль видалено');
-  }, []);
+    const token = localStorage.getItem('omomo_auth_token');
+    if (token && isAuthenticated && !goalId.includes('-')) {
+      fetch(`${API_BASE}/api/workouts/goals/${goalId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setWorkoutGoals(prev => prev.filter(goal => goal.id !== goalId));
+          toast.success('Ціль видалено');
+        }
+      })
+      .catch(console.error);
+    } else {
+      setWorkoutGoals(prev => prev.filter(goal => goal.id !== goalId));
+      toast.success('Ціль видалено');
+    }
+  }, [isAuthenticated]);
 
   // Добавление пользовательского упражнения
   const addCustomExercise = useCallback((exercise: Omit<Exercise, 'id'>) => {
-    const newExercise: Exercise = {
-      ...exercise,
-      id: crypto.randomUUID(),
-      isCustom: true
-    };
-    setCustomExercises(prev => [...prev, newExercise]);
-    toast.success('Вправу додано!');
-  }, []);
+    const token = localStorage.getItem('omomo_auth_token');
+    if (token && isAuthenticated) {
+      fetch(`${API_BASE}/api/workouts/exercises`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(exercise)
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.exercise) {
+          setCustomExercises(prev => [...prev, { id: data.exercise._id, ...data.exercise }]);
+          toast.success('Вправу додано!');
+        }
+      })
+      .catch(console.error);
+    } else {
+      const newExercise: Exercise = {
+        ...exercise,
+        id: crypto.randomUUID(),
+        isCustom: true
+      };
+      setCustomExercises(prev => [...prev, newExercise]);
+      toast.success('Вправу додано!');
+    }
+  }, [isAuthenticated]);
 
   // Статистика тренировок
   const workoutStats = useMemo((): WorkoutStats => {

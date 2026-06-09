@@ -20,6 +20,7 @@ import {
   Target
 } from "lucide-react";
 import { useState, useMemo } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import { useArticles } from "@/hooks/useArticles";
 import { ArticleAnalytics } from "@/components/ArticleAnalytics";
 import { ArticleReader } from "@/components/ArticleReader";
@@ -49,8 +50,11 @@ export default function Articles() {
     isArticleSaved,
     saveArticle,
     likeArticle,
-    isArticleLiked
+    isArticleLiked,
+    deleteUserArticle
   } = useArticles();
+  
+  const { user } = useAuth();
 
   const [activeTab, setActiveTab] = useState<"feed" | "categories" | "saved" | "analytics">("feed");
   const [searchQuery, setSearchQuery] = useState("");
@@ -299,6 +303,8 @@ export default function Articles() {
                   onArticleClick={handleArticleClick}
                   onLike={likeArticle}
                   onSave={saveArticle}
+                  canDelete={user?.role === 'admin' || user?.id === article.authorId}
+                  onDelete={deleteUserArticle}
                 />
                                   ))}
                                 </div>
@@ -335,6 +341,8 @@ export default function Articles() {
                   onArticleClick={handleArticleClick}
                   onLike={likeArticle}
                   onSave={saveArticle}
+                  canDelete={user?.role === 'admin' || user?.id === article.authorId}
+                  onDelete={deleteUserArticle}
                   variant="compact"
                 />
                     ))
@@ -371,72 +379,82 @@ export default function Articles() {
   return (
     <div className="min-h-screen bg-background">
       <div className="flex">
-        {/* Боковая панель */}
         <DashboardSidebar />
         
-        {/* Основной контент */}
-        <div className="flex-1 lg:ml-64">
-          {/* Мобильный заголовок */}
+        <div className="flex-1 min-w-0 pb-20 md:pb-8 lg:ml-64">
           <MobileHeader />
           
-          <div className="p-4 lg:p-8">
-            {/* Header */}
-            <ArticlesHeaderBar
-              onCreateArticle={handleCreateArticle}
-              onOpenSettings={handleOpenSettings}
-            />
-
-            {/* Tabs Navigation */}
-            <ArticlesTabsNavigation
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-            />
-
-            {/* Main Content */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              {/* Main Content Area */}
-              <div className="lg:col-span-3">
-                {getTabContent()}
+          <main className="p-4 lg:p-8 max-w-5xl mx-auto w-full space-y-6">
+            <div className="flex justify-between items-start md:items-center flex-col md:flex-row gap-4">
+              <div>
+                <h1 className="text-3xl font-extrabold tracking-tight">Статті та поради</h1>
+                <p className="text-muted-foreground mt-1">
+                  Корисна інформація для вашого здоров'я та фітнесу
+                </p>
               </div>
-
-              {/* Sidebar */}
-              <div className="lg:col-span-1">
-                <ArticlesSidebar
-                  recommendedTopics={recommendedTopics}
-                  userActivity={userActivity}
-                  onTopicClick={handleTopicClick}
-                />
-              </div>
+              <CreateArticleModal onArticleCreated={(article) => handleArticleClick(article)} />
             </div>
 
-            {/* Bottom Stats */}
-            {activeTab === "feed" && (
-              <div className="mt-8">
-                <ArticlesBottomStats
-                  totalArticlesRead={userStats.articlesRead}
-                  weeklyGoal={userStats.weeklyGoal}
-                  weeklyProgress={userStats.weeklyProgress}
-                  readingStreak={userStats.readingStreak}
-                  onViewAnalytics={handleViewAnalytics}
-                />
+            <Card className="p-4 bg-card/30 backdrop-blur-sm border border-muted/30 shadow-sm">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                  <Input
+                    placeholder="Пошук статей..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 h-10 bg-card/50 border-muted/30"
+                  />
+                </div>
+                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                  <SelectTrigger className="w-full md:w-48 h-10 bg-card/50 border-muted/30">
+                    <SelectValue placeholder="Всі категорії" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Всі категорії</SelectItem>
+                    {allCategories.map(category => (
+                      <SelectItem key={category.id} value={category.id}>
+                        <div className="flex items-center gap-2">
+                          {getCategoryIcon(category.id)}
+                          {category.nameUk}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+            </Card>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredArticles.map(article => (
+                <ArticlesArticleCard
+                  key={article.id} 
+                  article={article}
+                  isLiked={isArticleLiked(article.id)}
+                  isSaved={isArticleSaved(article.id)}
+                  onArticleClick={handleArticleClick}
+                  onLike={likeArticle}
+                  onSave={saveArticle}
+                  canDelete={user?.role === 'admin' || user?.id === article.authorId}
+                  onDelete={deleteUserArticle}
+                />
+              ))}
+            </div>
+
+            {filteredArticles.length === 0 && (
+              <Card className="p-12 text-center bg-card/30 border border-muted/30 shadow-sm">
+                <Search className="w-8 h-8 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold">Статті не знайдено</h3>
+                <p className="text-muted-foreground">
+                  Спробуйте змінити пошуковий запит
+                </p>
+              </Card>
             )}
-          </div>
+          </main>
         </div>
       </div>
       
-      {/* Мобильная навигация */}
-        <MobileBottomNav />
-
-      {/* Create Article Modal */}
-      {showCreateModal && (
-        <CreateArticleModal 
-          onArticleCreated={() => {
-            setShowCreateModal(false);
-            window.location.reload();
-          }}
-        />
-      )}
+      <MobileBottomNav />
     </div>
   );
 }

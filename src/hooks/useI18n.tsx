@@ -184,6 +184,27 @@ const uk: Dict = {
   
   // Додаткові переклади
   viewPlan: "Переглянути план",
+  trainers: "Тренери",
+  music: "Музика",
+  ittenWheel: "Коло Іттена",
+  colorHarmony: "Гармонія кольорів",
+  ittenWheelDesc: "Визначення гармонійного сполучення кольорів",
+  complementary: "Комплементарна",
+  analogous: "Аналогова",
+  triadic: "Тріада",
+  splitComplementary: "Розділена комплементарна",
+  tetradic: "Тетрада (Подвійна комплементарна)",
+  baseColor: "Базовий колір",
+  harmonyScheme: "Схема гармонії",
+  copyHex: "Копіювати HEX",
+  copyRgb: "Копіювати RGB",
+  copyHsl: "Копіювати HSL",
+  copied: "Скопійовано!",
+  colorCode: "Код кольору",
+  sandboxTitle: "Інтерактивний макет (Пісочниця)",
+  sandboxDesc: "Динамічний перегляд застосування кольорів у дизайні інтерфейсу",
+  codeExport: "Експорт коду",
+  codeExportDesc: "Готові стилі та React/Tailwind компоненти",
 };
 
 const en: Dict = {
@@ -367,6 +388,27 @@ const en: Dict = {
   
   // Additional translations
   viewPlan: "View plan",
+  trainers: "Trainers",
+  music: "Music",
+  ittenWheel: "Itten's Wheel",
+  colorHarmony: "Color Harmony",
+  ittenWheelDesc: "Determining harmonious combinations of colors",
+  complementary: "Complementary",
+  analogous: "Analogous",
+  triadic: "Triadic",
+  splitComplementary: "Split-Complementary",
+  tetradic: "Tetradic (Double Complementary)",
+  baseColor: "Base Color",
+  harmonyScheme: "Harmony Scheme",
+  copyHex: "Copy HEX",
+  copyRgb: "Copy RGB",
+  copyHsl: "Copy HSL",
+  copied: "Copied!",
+  colorCode: "Color Code",
+  sandboxTitle: "Interactive Sandbox",
+  sandboxDesc: "Real-time preview of color application in UI design",
+  codeExport: "Code Export",
+  codeExportDesc: "Ready-to-use styles and React/Tailwind components",
 };
 
 type I18nContextValue = {

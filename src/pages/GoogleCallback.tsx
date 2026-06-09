@@ -27,14 +27,14 @@ export default function GoogleCallback() {
 
         if (!code || !state) {
           console.error("Missing required parameters:", { code: !!code, state: !!state });
-          setError("Отсутствуют необходимые параметры авторизации");
+          setError("Відсутні необхідні параметри авторизації");
           return;
         }
 
         // Проверяем state
         const savedState = sessionStorage.getItem("google_oauth_state");
         if (state !== savedState) {
-          setError("Неверный state параметр");
+          setError("Невірний параметр state");
           return;
         }
 
@@ -84,64 +84,44 @@ export default function GoogleCallback() {
         if (!userResponse.ok) {
           const errorText = await userResponse.text();
           console.error('User info request failed:', errorText);
-          throw new Error('Не удалось получить данные пользователя');
+          throw new Error('Не вдалося отримати дані користувача');
         }
 
         const userData = await userResponse.json();
         console.log("Google Callback - Real user data received:", userData);
 
-        // Проверяем, есть ли уже данные профиля (завершен ли онбординг)
-        const existingProfile = localStorage.getItem("omom_profile_extra");
-        const existingUser = localStorage.getItem("omomo_auth_user");
-        
-        // Новый пользователь = нет профиля ИЛИ нет пользователя в localStorage
-        const isNewUser = !existingProfile || !existingUser;
-        
-        console.log("Google Callback - Checking if new user:", isNewUser);
-        console.log("Google Callback - Existing profile:", !!existingProfile);
-        console.log("Google Callback - Existing user:", !!existingUser);
-        console.log("Google Callback - Profile data:", existingProfile);
-        console.log("Google Callback - User data:", existingUser);
+        // Send to backend
+        const API_BASE = import.meta.env.PROD
+          ? (import.meta.env.VITE_API_BASE_URL && !import.meta.env.VITE_API_BASE_URL.includes('localhost') ? import.meta.env.VITE_API_BASE_URL : '')
+          : (import.meta.env.VITE_API_BASE_URL || '');
 
-        if (isNewUser) {
-          console.log("Google Callback - New user detected, storing data for onboarding");
-          
-          // Очищаем старые данные для чистого теста
-          localStorage.removeItem("omom_profile_extra");
-          localStorage.removeItem("omom_google_user_data");
-          
-          // Сохраняем данные Google для онбординга
-          localStorage.setItem("omom_google_user_data", JSON.stringify({
-            id: userData.id,
-            name: userData.name,
+        const backendAuthRes = await fetch(`${API_BASE}/api/auth/google`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             email: userData.email,
-            avatarUrl: userData.picture
-          }));
-
-          // Создаем временного пользователя для авторизации
-          updateUser({
-            id: userData.id,
             name: userData.name,
-            email: userData.email,
-            avatarUrl: userData.picture,
-            targets: { calories: 2000, protein: 120, fats: 65, carbs: 250 },
-          });
+            googleId: userData.id
+          })
+        });
 
-          // Перенаправляем на страницу авторизации для онбординга
+        if (!backendAuthRes.ok) {
+          throw new Error('Не удалось авторизоваться на сервере');
+        }
+
+        const backendData = await backendAuthRes.json();
+        
+        // Save the JWT token
+        localStorage.setItem('omomo_auth_token', backendData.token);
+
+        // Обновляем пользователя с данными от сервера
+        updateUser(backendData.user);
+
+        if (backendData.isNewUser || !backendData.user.onboardingCompleted) {
+          console.log("Google Callback - User needs onboarding");
           navigate("/auth");
         } else {
           console.log("Google Callback - Existing user, updating profile");
-          
-          // Обновляем пользователя с данными от Google
-          updateUser({
-            id: userData.id,
-            name: userData.name,
-            email: userData.email,
-            avatarUrl: userData.picture,
-            targets: { calories: 2000, protein: 120, fats: 65, carbs: 250 },
-          });
-
-          // Перенаправляем на главную страницу
           navigate("/");
         }
       } catch (err) {

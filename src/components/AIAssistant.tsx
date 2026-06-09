@@ -20,7 +20,7 @@ import { AIRecipeGenerator } from "./AIRecipeGenerator";
 import { AIMealPlanner } from "./AIMealPlanner";
 import { AIProductAnalyzer } from "./AIProductAnalyzer";
 import { AINutritionAdvisor } from "./AINutritionAdvisor";
-import { GeneratedRecipe, GeneratedMealPlan, ProductAnalysis, NutritionAdvice } from "@/lib/gemini-ai";
+import { GeneratedRecipe, GeneratedMealPlan, ProductAnalysis, NutritionAdvice } from "@/lib/openai-ai";
 
 interface AIAssistantProps {
   onRecipeGenerated?: (recipe: GeneratedRecipe) => void;
@@ -82,7 +82,7 @@ export function AIAssistant({
                 AI Помощник по Питанию
               </h2>
               <p className="text-sm text-muted-foreground">
-                Умные рекомендации, рецепты и советы с использованием Gemini AI
+                Умные рекомендации, рецепты и советы с использованием OpenAI
               </p>
             </div>
           </div>
@@ -93,7 +93,7 @@ export function AIAssistant({
             </Badge>
             <Badge variant="outline" className="px-3 py-1">
               <Zap className="w-3 h-3 mr-1" />
-              Gemini AI
+              OpenAI
             </Badge>
           </div>
         </div>

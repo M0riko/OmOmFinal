@@ -31,33 +31,36 @@ export function WeightProvider({ children }: { children: React.ReactNode }) {
   const [entries, setEntries] = useState<WeightEntry[]>([]);
   const { user, isAuthenticated } = useAuth();
 
-  // Завантаження даних з localStorage
+  // Завантаження даних з API
   useEffect(() => {
     if (!isAuthenticated) {
       setEntries([]);
       return;
     }
-    try {
-      const raw = localStorage.getItem(getWeightEntriesKey(user?.id));
-      if (raw) {
-        const allEntries: WeightEntry[] = JSON.parse(raw);
-        // Сортуємо за датою (новіші першими)
-        allEntries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        setEntries(allEntries);
-      } else {
-        setEntries([]);
-      }
-    } catch {}
+
+    // Load from database
+    const token = localStorage.getItem('omomo_auth_token');
+    if (token) {
+      fetch(`${API_BASE}/api/weight-logs`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.weightLogs) {
+          setEntries(data.weightLogs.map((w: any) => ({
+            id: w._id,
+            date: w.date,
+            weight: w.weight,
+            time: w.time,
+            notes: w.notes
+          })));
+        }
+      })
+      .catch(console.error);
+    }
   }, [isAuthenticated, user?.id]);
 
-  // Збереження даних в localStorage
-  useEffect(() => {
-    if (isAuthenticated) {
-      try {
-        localStorage.setItem(getWeightEntriesKey(user?.id), JSON.stringify(entries));
-      } catch {}
-    }
-  }, [entries, isAuthenticated, user?.id]);
+  // Збереження даних в localStorage відключено, працюємо з БД
 
   const currentWeight = useMemo(() => {
     if (entries.length === 0) return null;
@@ -79,24 +82,77 @@ export function WeightProvider({ children }: { children: React.ReactNode }) {
   }, [currentWeight, isAuthenticated]);
 
   const addWeight = (weight: number, notes?: string) => {
-
     const now = new Date();
-    const entry: WeightEntry = {
-      id: crypto.randomUUID(),
-      date: now.toISOString().split('T')[0],
-      weight,
-      time: now.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }),
-      notes,
-    };
-    setEntries((prev) => {
-      const updated = [entry, ...prev];
-      updated.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      return updated;
-    });
+    const dateStr = now.toISOString().split('T')[0];
+    const timeStr = now.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+
+    const token = localStorage.getItem('omomo_auth_token');
+    if (isAuthenticated && token) {
+      fetch(`${API_BASE}/api/weight-logs`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          date: dateStr,
+          weight,
+          time: timeStr,
+          notes
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.weightLog) {
+          setEntries((prev) => {
+            const updated = [{
+              id: data.weightLog._id,
+              date: dateStr,
+              weight,
+              time: timeStr,
+              notes
+            }, ...prev];
+            updated.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            return updated;
+          });
+        }
+      })
+      .catch(console.error);
+    } else {
+      const entry: WeightEntry = {
+        id: crypto.randomUUID(),
+        date: dateStr,
+        weight,
+        time: timeStr,
+        notes,
+      };
+      setEntries((prev) => {
+        const updated = [entry, ...prev];
+        updated.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        return updated;
+      });
+    }
   };
 
   const removeWeight = (id: string) => {
-    setEntries((prev) => prev.filter((e) => e.id !== id));
+    const token = localStorage.getItem('omomo_auth_token');
+    if (isAuthenticated && token) {
+      fetch(`${API_BASE}/api/weight-logs/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setEntries((prev) => prev.filter((e) => e.id !== id));
+        }
+      })
+      .catch(console.error);
+    } else {
+      setEntries((prev) => prev.filter((e) => e.id !== id));
+    }
   };
 
   const getWeightForDate = (date: Date) => {

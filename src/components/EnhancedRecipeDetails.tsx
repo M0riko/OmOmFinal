@@ -33,14 +33,30 @@ import { useState, useEffect } from "react";
 import { useSmartFridge } from "@/hooks/useSmartFridge";
 import { useMealPlanner } from "@/hooks/useMealPlanner";
 import { useShoppingList } from "@/hooks/useShoppingList";
+import { useDaily } from "@/hooks/useDaily";
 import { toast } from "sonner";
+
+// Type definitions for Meal Plan
+type MealType = "breakfast" | "lunch" | "dinner" | "snack";
+type MealPlanItem = {
+  id: string;
+  recipeId?: number;
+  name: string;
+  mealType: MealType;
+  calories: number;
+  protein: number;
+  fat: number;
+  carbs: number;
+  image?: string;
+  date: string;
+};
 
 type EnhancedRecipeDetailsProps = {
   recipe: Recipe | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   isFavorite: boolean;
-  onToggleFavorite: (recipeId: number) => void;
+  onToggleFavorite: (recipe: Recipe) => void;
   translateRecipeToCyrillic: (name: string) => string;
 };
 
@@ -63,11 +79,66 @@ export function EnhancedRecipeDetails({
   const { products, addToShoppingList } = useSmartFridge();
   const { addToMealPlan } = useMealPlanner();
   const { addFromRecipe } = useShoppingList();
+  const { addEntry } = useDaily();
   const [servings, setServings] = useState(recipe?.servings || 1);
   const [ingredients, setIngredients] = useState<IngredientWithStatus[]>([]);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [showAddToMealPlan, setShowAddToMealPlan] = useState(false);
+  const [planDate, setPlanDate] = useState(new Date().toISOString().split('T')[0]);
+  const [planMealType, setPlanMealType] = useState<MealType>("lunch");
+
+  const handleAddToMealPlan = () => {
+    if (!recipe) return;
+
+    try {
+      const STORAGE_KEY = "omomo_meal_plans";
+      const saved = localStorage.getItem(STORAGE_KEY);
+      let plans = saved ? JSON.parse(saved) : [];
+
+      let datePlan = plans.find((p: any) => p.date === planDate);
+      if (!datePlan) {
+        datePlan = {
+          date: planDate,
+          plan: { breakfast: [], lunch: [], dinner: [], snack: [] },
+          totals: { calories: 0, protein: 0, fat: 0, carbs: 0 }
+        };
+        plans.push(datePlan);
+      }
+
+      const calories = getNutritionPerServing('Calories');
+      const protein = getNutritionPerServing('Protein');
+      const fats = getNutritionPerServing('Fat');
+      const carbs = getNutritionPerServing('Carbohydrates');
+
+      const mealItem: MealPlanItem = {
+        id: crypto.randomUUID(),
+        recipeId: recipe.id,
+        name: translateRecipeToCyrillic(recipe.title),
+        mealType: planMealType,
+        calories,
+        protein,
+        fat: fats,
+        carbs,
+        image: recipe.image,
+        date: planDate
+      };
+
+      datePlan.plan[planMealType].push(mealItem);
+      datePlan.totals.calories += calories;
+      datePlan.totals.protein += protein;
+      datePlan.totals.fat += fats;
+      datePlan.totals.carbs += carbs;
+
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(plans));
+      toast.success(`"${translateRecipeToCyrillic(recipe.title)}" додано до плану харчування!`);
+      setShowAddToMealPlan(false);
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Error adding to meal plan:", error);
+      toast.error("Помилка збереження в план харчування");
+    }
+  };
 
   useEffect(() => {
     if (recipe && open) {
@@ -174,16 +245,30 @@ export function EnhancedRecipeDetails({
   const addToMealPlanHandler = (mealType: string, date: string) => {
     if (!recipe) return;
 
-    // Здесь можно добавить логику добавления в план питания
-    console.log('Adding to meal plan:', { recipe: recipe.title, mealType, date });
+    addToMealPlan(date, mealType, recipe);
+    toast.success(`Додано до плану харчування!`);
     setShowAddToMealPlan(false);
   };
 
   const logMeal = () => {
     if (!recipe) return;
 
-    // Здесь можно добавить логику записи в дневник питания
-    console.log('Logging meal:', { recipe: recipe.title, servings });
+    const calories = getNutritionPerServing('Calories');
+    const protein = getNutritionPerServing('Protein');
+    const fats = getNutritionPerServing('Fat');
+    const carbs = getNutritionPerServing('Carbohydrates');
+
+    addEntry({
+      type: "meal",
+      name: translateRecipeToCyrillic(recipe.title),
+      mealType: "lunch", // Default to lunch, could be enhanced
+      calories,
+      protein,
+      fats,
+      carbs
+    });
+    
+    toast.success(`"${translateRecipeToCyrillic(recipe.title)}" додано до щоденника!`);
     onOpenChange(false);
   };
 
@@ -209,6 +294,7 @@ export function EnhancedRecipeDetails({
   const totalIngredients = ingredients.length;
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -227,7 +313,7 @@ export function EnhancedRecipeDetails({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => onToggleFavorite(recipe.id)}
+                onClick={() => onToggleFavorite(recipe as Recipe)}
                 className="h-9 w-9 p-0"
               >
                 <Heart className={`w-5 h-5 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`} />
@@ -560,5 +646,50 @@ export function EnhancedRecipeDetails({
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* Модалка для додавання в План харчування */}
+    <Dialog open={showAddToMealPlan} onOpenChange={setShowAddToMealPlan}>
+      <DialogContent className="max-w-md bg-card">
+        <DialogHeader>
+          <DialogTitle>Додати до плану харчування</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label>Дата</Label>
+            <Input 
+              type="date" 
+              value={planDate}
+              onChange={(e) => setPlanDate(e.target.value)}
+              min={new Date().toISOString().split('T')[0]}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Прийом їжі</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <Button 
+                variant={planMealType === "breakfast" ? "default" : "outline"}
+                onClick={() => setPlanMealType("breakfast")}
+              >Сніданок</Button>
+              <Button 
+                variant={planMealType === "lunch" ? "default" : "outline"}
+                onClick={() => setPlanMealType("lunch")}
+              >Обід</Button>
+              <Button 
+                variant={planMealType === "dinner" ? "default" : "outline"}
+                onClick={() => setPlanMealType("dinner")}
+              >Вечеря</Button>
+              <Button 
+                variant={planMealType === "snack" ? "default" : "outline"}
+                onClick={() => setPlanMealType("snack")}
+              >Перекус</Button>
+            </div>
+          </div>
+          <Button onClick={handleAddToMealPlan} className="w-full mt-4">
+            Зберегти в план
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

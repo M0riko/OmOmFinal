@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { toast } from "sonner";
 import { 
   MealPlanSettings, 
   MealPlanPreferences,
@@ -17,7 +18,7 @@ import {
 import { useSmartFridge } from "./useSmartFridge";
 import { useAuth } from "./useAuth";
 import { apiService } from "@/lib/api";
-import { toast } from "sonner";
+import { generateDetailedRecipe } from "@/lib/openai-ai";
 
 export function useMealPlanner() {
   const { user } = useAuth();
@@ -256,47 +257,33 @@ export function useMealPlanner() {
     useFridgeProducts: boolean
   ): Promise<PlannedMeal["recipe"] | null> => {
     try {
-      // Search for recipes based on meal type and preferences
-      const searchTerms = getSearchTermsForMeal(mealType, preferences);
+      // Use AI to generate a detailed recipe matching exact calories
+      const aiRecipe = await generateDetailedRecipe(mealType, targetCalories, preferences.dietType);
       
-      for (const term of searchTerms) {
-        try {
-          const result = await apiService.searchRecipes(term, { number: 5 });
-          if (result.recipes.length > 0) {
-            const recipe = result.recipes[0];
-            
-            // Check if ingredients are available in fridge
-            const ingredients = recipe.extendedIngredients?.map((ing: any) => ({
-              name: ing.name,
-              amount: ing.amount,
-              unit: ing.unit,
-              isAvailable: useFridgeProducts ? checkIngredientAvailability(ing.name) : false
-            })) || [];
-            
-            return {
-              id: String(recipe.id),
-              title: recipe.title,
-              image: recipe.image,
-              readyInMinutes: recipe.readyInMinutes,
-              servings: recipe.servings,
-              nutrition: {
-                calories: Math.round(recipe.nutrition?.nutrients?.find((n: any) => n.name === "Calories")?.amount || 300),
-                protein: Math.round(recipe.nutrition?.nutrients?.find((n: any) => n.name === "Protein")?.amount || 15),
-                fat: Math.round(recipe.nutrition?.nutrients?.find((n: any) => n.name === "Fat")?.amount || 10),
-                carbs: Math.round(recipe.nutrition?.nutrients?.find((n: any) => n.name === "Carbohydrates")?.amount || 30)
-              },
-              ingredients,
-              instructions: recipe.analyzedInstructions?.[0]?.steps?.map((step: any) => step.step) || []
-            };
-          }
-        } catch (error) {
-          console.error(`Error searching for ${term}:`, error);
-        }
-      }
-      
-      throw new Error("Не вдалося знайти рецепт");
+      const ingredients = aiRecipe.ingredients.map((ing: any) => ({
+        name: ing.name,
+        amount: ing.amount,
+        unit: ing.unit,
+        isAvailable: useFridgeProducts ? checkIngredientAvailability(ing.name) : false
+      }));
+
+      return {
+        id: crypto.randomUUID(),
+        title: aiRecipe.title,
+        image: "https://images.unsplash.com/photo-1490818387583-1b5f2223d20d?auto=format&fit=crop&w=800&q=80", // Placeholder for AI recipes
+        readyInMinutes: aiRecipe.readyInMinutes || 20,
+        servings: aiRecipe.servings || 1,
+        nutrition: {
+          calories: aiRecipe.nutrition.calories || targetCalories,
+          protein: aiRecipe.nutrition.protein || 15,
+          fat: aiRecipe.nutrition.fat || 10,
+          carbs: aiRecipe.nutrition.carbs || 30
+        },
+        ingredients,
+        instructions: aiRecipe.instructions || []
+      };
     } catch (error) {
-      console.error("Error generating recipe:", error);
+      console.error("Error generating recipe via AI:", error);
       throw error;
     }
   };

@@ -12,6 +12,8 @@ import { WorkoutGoalsTracker } from "@/components/WorkoutGoalsTracker";
 import { ExerciseLibrary } from "@/components/ExerciseLibrary";
 import { WorkoutConstructor } from "@/components/WorkoutConstructor";
 import { AIWorkoutGenerator } from "@/components/AIWorkoutGenerator";
+import { LiveWorkoutMode } from "@/components/LiveWorkoutMode";
+import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { Activity, Calendar, Trophy, Target } from "lucide-react";
 import { useState } from "react";
@@ -28,7 +30,11 @@ export default function Training() {
     personalRecords,
     workoutGoals,
     isLiveMode,
-    currentWorkout
+    currentWorkout,
+    startWorkout,
+    completeWorkout,
+    cancelWorkout,
+    planWorkout
   } = useWorkouts();
   
   const [activeTab, setActiveTab] = useState<"calendar" | "analytics" | "goals" | "library" | "constructor">("calendar");
@@ -54,8 +60,26 @@ export default function Training() {
     toast.info("Перехід до конструктора тренувань");
   };
 
+  const handleSaveConstructorWorkout = (workoutDay: any) => {
+    const plannedWorkout = {
+      name: workoutDay.nameUk || workoutDay.name,
+      exercises: workoutDay.exercises.map((ex: any) => ({
+        ...ex,
+        sets: ex.sets.map((set: any) => ({ ...set, isCompleted: false }))
+      })),
+      scheduledDate: currentDate.toISOString(),
+      isCompleted: false
+    };
+    planWorkout(plannedWorkout);
+    setActiveTab("calendar");
+  };
+
   const handleStartWorkout = () => {
-    toast.info("Початок тренування");
+    if (todayWorkout) {
+      startWorkout(todayWorkout.id);
+    } else {
+      toast.info("На сьогодні немає запланованих тренувань");
+    }
   };
 
   const handleSetGoal = () => {
@@ -176,7 +200,7 @@ export default function Training() {
               availableTime={45}
               onStartWorkout={handleAIWorkoutStart}
             />
-            <WorkoutConstructor />
+            <WorkoutConstructor onSaveWorkout={handleSaveConstructorWorkout} />
           </div>
         );
 
@@ -210,6 +234,22 @@ export default function Training() {
           {getTabContent()}
         </main>
         <MobileBottomNav />
+
+        {/* Live режим */}
+        {isLiveMode && currentWorkout && (
+          <Dialog open={isLiveMode} onOpenChange={(open) => !open && cancelWorkout()}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader className="sr-only">
+                <DialogTitle>Тренування: {currentWorkout.name}</DialogTitle>
+              </DialogHeader>
+              <LiveWorkoutMode
+                workout={currentWorkout}
+                onComplete={completeWorkout}
+                onCancel={cancelWorkout}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
     </div>
   );

@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, Loader2, Plus, X } from "lucide-react";
-import { chatWithAICoach } from "@/lib/gemini-ai";
+import { chatWithAICoach } from "@/lib/openai-ai";
 import { toast } from "sonner";
 import { Recipe } from "@/lib/api";
 

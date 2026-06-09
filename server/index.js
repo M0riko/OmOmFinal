@@ -21,13 +21,17 @@ app.get('/api/healthcheck', (req, res) => {
 });
 
 // Use routes
+app.use('/api/admin', require('./routes/admin'));
+app.use('/api/trainers', require('./routes/trainers'));
+app.use('/api/music', require('./routes/music'));
+// app.use('/api/fatsecret', require('./routes/fatsecret'));
 app.use('/api', require('./routes/api'));
 
 // Serve static assets in production if the dist directory exists
 const distPath = path.join(__dirname, '../dist');
 if (fs.existsSync(distPath)) {
   app.use(express.static(distPath));
-  app.get('*', (req, res) => {
+  app.get(/.*/, (req, res) => {
     res.sendFile(path.resolve(distPath, 'index.html'));
   });
 }

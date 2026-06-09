@@ -3,14 +3,16 @@ import { MobileHeader } from "@/components/MobileHeader";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { MealCalendar } from "@/components/MealCalendar";
 import { DailyProgress } from "@/components/DailyProgress";
-import { QuickActions } from "@/components/QuickActions";
+
 import { MealsSection } from "@/components/MealsSection";
 import { ActivityWater } from "@/components/ActivityWater";
+import { StepTracker } from "@/components/StepTracker";
+import { SleepTracker } from "@/components/SleepTracker";
 import { MotivationBanner } from "@/components/MotivationBanner";
 import { AddMealModal } from "@/components/AddMealModal";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { AIInsightsCard } from "@/components/AIInsightsCard";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -24,7 +26,7 @@ import { toast } from "sonner";
 
 const Index = () => {
   const { user } = useAuth();
-  const { totals, streakDays } = useDaily();
+  const { totals, streakDays, addEntry } = useDaily();
   const { todayWater, addWater } = useWater();
   const { addWeight } = useWeight();
   const { t } = useI18n();
@@ -57,6 +59,36 @@ const Index = () => {
   const handleAddWeight = () => {
     setWeightModalOpen(true);
   };
+
+  const handleAddRecipeToDaily = (recipe: any) => {
+    const calories = Math.round(recipe.nutrition?.nutrients?.find((n: any) => n.name === "Calories")?.amount || 0);
+    const protein = Math.round(recipe.nutrition?.nutrients?.find((n: any) => n.name === "Protein")?.amount || 0);
+    const fats = Math.round(recipe.nutrition?.nutrients?.find((n: any) => n.name === "Fat")?.amount || 0);
+    const carbs = Math.round(recipe.nutrition?.nutrients?.find((n: any) => n.name === "Carbohydrates")?.amount || 0);
+
+    addEntry({
+      type: "meal",
+      name: recipe.title,
+      mealType: presetMealType || "lunch",
+      calories,
+      protein,
+      fats,
+      carbs
+    });
+  };
+
+  const handleAddManualMeal = (meal: any) => {
+    addEntry({
+      type: "meal",
+      name: meal.name,
+      mealType: presetMealType || "lunch",
+      calories: Number(meal.calories),
+      protein: Number(meal.protein),
+      fats: Number(meal.fat),
+      carbs: Number(meal.carbs)
+    });
+  };
+
 
   const handleWaterSubmit = () => {
     const amount = parseFloat(waterAmount);
@@ -112,17 +144,14 @@ const Index = () => {
               {/* Daily Progress */}
               <DailyProgress />
               
-              {/* Mobile-only Quick Actions */}
-              <div className="block lg:hidden w-full">
-                <QuickActions 
-                  onAddFood={handleAddFood}
-                  onAddWater={handleAddWater}
-                  onAddWeight={handleAddWeight}
-                />
-              </div>
+              {/* Mobile-only Quick Actions Removed */}
 
-              {/* Activity & Water */}
-              <ActivityWater />
+              {/* Activity & Water & Steps & Sleep */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                <ActivityWater />
+                <StepTracker />
+                <SleepTracker />
+              </div>
               
               {/* Mobile-only AI Insights */}
               <div className="block lg:hidden w-full">
@@ -142,13 +171,8 @@ const Index = () => {
               
             </div>
 
-            {/* Right Column (Sidebar) - Desktop Only */}
-            <div className="hidden lg:flex w-full lg:w-[360px] flex-col gap-6 sticky top-24">
-              <QuickActions 
-                onAddFood={handleAddFood}
-                onAddWater={handleAddWater}
-                onAddWeight={handleAddWeight}
-              />
+              {/* Right Column (Sidebar) - Desktop Only */}
+              <div className="hidden lg:flex w-full lg:w-[360px] flex-col gap-6 sticky top-24">
               
               <AIInsightsCard 
                 userData={user}
@@ -168,6 +192,8 @@ const Index = () => {
             if (!open) setPresetMealType(undefined);
           }} 
           presetMealType={presetMealType}
+          onAddMeal={handleAddRecipeToDaily}
+          onAddManual={handleAddManualMeal}
         />
         
         {/* Модальне вікно для додавання води */}
@@ -175,6 +201,9 @@ const Index = () => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Додати воду</DialogTitle>
+              <DialogDescription className="sr-only">
+                Введіть кількість води для додавання до щоденного прогресу.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
@@ -209,6 +238,9 @@ const Index = () => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Додати вагу</DialogTitle>
+              <DialogDescription className="sr-only">
+                Введіть вашу поточну вагу для відстеження змін.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">

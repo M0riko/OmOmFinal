@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { DailyPlan, PlannedMeal, getMealTypeName, getMealTypeIcon, getStatusColor, getStatusText } from "@/lib/meal-planner";
 import { MealSwapOptions } from "@/lib/meal-planner";
+import { RecipeDetailsModal } from "@/components/RecipeDetailsModal";
 
 interface DailyPlanInterfaceProps {
   dailyPlan: DailyPlan;
@@ -47,6 +48,14 @@ export function DailyPlanInterface({
   const [selectedMeal, setSelectedMeal] = useState<PlannedMeal | null>(null);
   const [swapOptions, setSwapOptions] = useState<MealSwapOptions | null>(null);
   const [showSwapDialog, setShowSwapDialog] = useState(false);
+  
+  const [recipeModalOpen, setRecipeModalOpen] = useState(false);
+  const [selectedRecipeForModal, setSelectedRecipeForModal] = useState<any>(null);
+
+  const handleViewRecipe = (recipe: any) => {
+    setSelectedRecipeForModal(recipe);
+    setRecipeModalOpen(true);
+  };
 
   const { date, meals, totalNutrition, progress, status } = dailyPlan;
 
@@ -379,6 +388,7 @@ export function DailyPlanInterface({
                     variant="outline"
                     size="sm"
                     className="gap-2"
+                    onClick={() => handleViewRecipe(meal.recipe)}
                   >
                     <Eye className="w-4 h-4" />
                     Рецепт
@@ -452,6 +462,12 @@ export function DailyPlanInterface({
           )}
         </DialogContent>
       </Dialog>
+
+      <RecipeDetailsModal 
+        isOpen={recipeModalOpen} 
+        onClose={() => setRecipeModalOpen(false)} 
+        recipe={selectedRecipeForModal} 
+      />
     </div>
   );
 }

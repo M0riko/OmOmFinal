@@ -1,0 +1,2249 @@
+ДОДАТОК
+до заяви про реєстрацію авторського права на твір
+
+ФРАГМЕНТ ЛІСТИНГУ КОДУ
+(вихідний текст комп'ютерної програми)
+
+Назва твору: «Комп’ютерна програма фітнес трекер OmOm»
+Розробник: Команда розробників OmOm
+
+================================================================================
+ОПИС СТРУКТУРИ НАДАНИХ ФРАГМЕНТІВ
+================================================================================
+Наведені нижче фрагменти коду представляють архітектурну основу та ключовий функціонал
+комп'ютерної програми "фітнес трекер OmOm", зокрема:
+1. Точка входу та ініціалізація React/Vite додатку.
+2. Маршрутизація сторінок та обробка глобальних станів/модальних вікон.
+3. Система автентифікації користувачів (реєстрація, вхід, відновлення паролю, OAuth).
+4. Клієнтська логіка збереження продуктів та відстеження запасів ("Розумний холодильник").
+5. Логіка планування та обліку спортивних тренувань (калорії, підходи, вправи).
+6. Інтеграція з АІ-тренером для надання персональних рекомендацій з харчування та тренувань.
+
+================================================================================
+ФРАГМЕНТИ ВИХІДНОГО ТЕКСТУ (КОДУ)
+================================================================================
+
+
+/* ============================================================================
+   ФАЙЛ: src/main.tsx
+   ОПИС: Точка входу та ініціалізація додатку
+   ============================================================================ */
+
+import { createRoot } from "react-dom/client";
+import App from "./App.tsx";
+import "./index.css";
+import { AuthProvider } from "./hooks/useAuth";
+import { DailyProvider } from "./hooks/useDaily";
+import { WaterProvider } from "./hooks/useWater";
+import { WeightProvider } from "./hooks/useWeight";
+import { ModalsProvider } from "@/hooks/useModals";
+import { ThemeProvider } from "@/hooks/useTheme";
+import { I18nProvider } from "@/hooks/useI18n";
+import { AchievementsProvider } from "@/hooks/useAchievements";
+
+createRoot(document.getElementById("root")!).render(
+  <ThemeProvider>
+    <I18nProvider>
+      <AuthProvider>
+        <AchievementsProvider>
+          <DailyProvider>
+            <WaterProvider>
+              <WeightProvider>
+                <ModalsProvider>
+                  <App />
+                </ModalsProvider>
+              </WeightProvider>
+            </WaterProvider>
+          </DailyProvider>
+        </AchievementsProvider>
+      </AuthProvider>
+    </I18nProvider>
+  </ThemeProvider>,
+);
+
+
+/* Кінець файлу: src/main.tsx */
+
+
+/* ============================================================================
+   ФАЙЛ: src/App.tsx
+   ОПИС: Конфігурація маршрутизації (routing) та глобальних провайдерів
+   ============================================================================ */
+
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useState } from "react";
+import { AuthGate } from "@/components/AuthGate";
+import { useModals } from "@/hooks/useModals";
+import { AddItemModal } from "@/components/AddItemModal";
+import Index from "./pages/Index";
+import Recipes from "./pages/Recipes";
+import NotFound from "./pages/NotFound";
+import Profile from "./pages/Profile";
+import Statistics from "./pages/Statistics";
+import AuthPage from "./pages/Auth";
+import Fridge from "./pages/Fridge";
+import SmartFridge from "./pages/SmartFridge";
+import MealPlan from "./pages/MealPlanNew";
+import Shopping from "./pages/Shopping";
+import Training from "./pages/Training";
+import Articles from "./pages/Articles";
+import AICoach from "./pages/AICoach";
+import Settings from "./pages/Settings";
+import GoogleCallback from "./pages/GoogleCallback";
+import { useAuth } from "./hooks/useAuth";
+import Trainers from "./pages/Trainers";
+import Music from "./pages/Music";
+import AdminPage from "./pages/Admin";
+import VerifyEmail from "./pages/VerifyEmail";
+import ResetPassword from "./pages/ResetPassword";
+
+const queryClient = new QueryClient();
+
+function Protected({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
+function AppErrorBoundary({ children }: { children: React.ReactNode }) {
+  const [error, setError] = useState<Error | null>(null);
+  if (error) {
+    return (
+      <div className="p-6 text-center">
+        <h1 className="text-xl font-bold mb-2">Щось пішло не так</h1>
+        <p className="text-sm text-muted-foreground mb-4">{error.message}</p>
+        <button className="px-3 py-2 border rounded" onClick={() => window.location.reload()}>Перезавантажити</button>
+      </div>
+    );
+  }
+  return (
+    <ErrorCatcher onError={setError}>{children}</ErrorCatcher>
+  );
+}
+
+function ErrorCatcher({ children, onError }: { children: React.ReactNode; onError: (e: Error) => void }) {
+  try {
+    return <>{children}</>;
+  } catch (e: any) {
+    onError(e);
+    return null;
+  }
+}
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <AuthGate>
+        <AppErrorBoundary>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<AuthPage />} />
+            <Route path="/auth/google/callback" element={<GoogleCallback />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/recipes" element={<Recipes />} />
+            <Route path="/fridge" element={<SmartFridge />} />
+            <Route path="/meal-plan" element={<MealPlan />} />
+            <Route path="/shopping" element={<Shopping />} />
+            <Route path="/training" element={<Training />} />
+            <Route path="/trainers" element={<Trainers />} />
+            <Route path="/music" element={<Music />} />
+            <Route path="/articles" element={<Articles />} />
+            <Route path="/ai-coach" element={<AICoach />} />
+            <Route
+              path="/profile"
+              element={
+                <Protected>
+                  <Profile />
+                </Protected>
+              }
+            />
+            <Route
+              path="/statistics"
+              element={
+                <Protected>
+                  <Statistics />
+                </Protected>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <Protected>
+                  <Settings />
+                </Protected>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <Protected>
+                  <AdminPage />
+                </Protected>
+              }
+            />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AppErrorBoundary>
+        </AuthGate>
+        <GlobalModals />
+      </BrowserRouter>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
+
+export default App;
+
+function GlobalModals() {
+  const { addItemOpen, setAddItemOpen, addItemPreset } = useModals();
+  return <AddItemModal open={addItemOpen} onOpenChange={setAddItemOpen} presetType={addItemPreset} />;
+}
+
+
+/* Кінець файлу: src/App.tsx */
+
+
+/* ============================================================================
+   ФАЙЛ: src/hooks/useAuth.tsx
+   ОПИС: Модуль авторизації, реєстрації та інтеграції з Google OAuth
+   ============================================================================ */
+
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+
+const API_BASE = import.meta.env.PROD
+  ? (import.meta.env.VITE_API_BASE_URL && !import.meta.env.VITE_API_BASE_URL.includes('localhost') ? import.meta.env.VITE_API_BASE_URL : '')
+  : (import.meta.env.VITE_API_BASE_URL || '');
+
+export type AuthUser = {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl?: string;
+  age?: number;
+  weight?: number;
+  height?: number;
+  role?: 'user' | 'admin';
+  isPremium?: boolean;
+  onboardingCompleted?: boolean;
+  targetWeight?: number;
+  calculatedCalories?: number;
+  targets?: {
+    calories: number;
+    protein: number;
+    fats: number;
+    carbs: number;
+  };
+};
+
+type AuthContextValue = {
+  user: AuthUser | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<void>;
+  completeRegistration: (email: string, userData: any) => void;
+  loginWithGoogle: () => Promise<void>;
+  logout: () => void;
+  updateUser: (updates: Partial<AuthUser>) => void;
+  activatePremium: () => Promise<void>;
+  toggleDevRole: () => Promise<void>;
+};
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+const STORAGE_KEY = "omomo_auth_user";
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Validate token and fetch user on load
+  useEffect(() => {
+    const validateSession = async () => {
+      try {
+        const token = localStorage.getItem('omomo_auth_token');
+        if (token) {
+          const res = await fetch(`${API_BASE}/api/user/me`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          
+          if (res.ok) {
+            const data = await res.json();
+            
+            // Re-merge with local targets if they exist
+            const raw = localStorage.getItem(STORAGE_KEY);
+            let localTargets = { calories: 2000, protein: 120, fats: 65, carbs: 250 };
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (parsed.targets) localTargets = parsed.targets;
+            }
+
+            setUser({
+              id: data.user.id,
+              name: data.user.username,
+              email: data.user.email,
+              age: data.user.age,
+              weight: data.user.weight,
+              height: data.user.height,
+              role: data.user.role,
+              isPremium: data.user.isPremium,
+              onboardingCompleted: data.user.onboardingCompleted,
+              targetWeight: data.user.targetWeight,
+              calculatedCalories: data.user.calculatedCalories,
+              targets: localTargets
+            });
+          } else {
+            localStorage.removeItem('omomo_auth_token');
+            localStorage.removeItem(STORAGE_KEY);
+            setUser(null);
+          }
+        } else {
+          localStorage.removeItem(STORAGE_KEY);
+          setUser(null);
+        }
+      } catch (e) {
+        console.error("Session validation error:", e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    validateSession();
+  }, []);
+
+  useEffect(() => {
+    try {
+      if (user) localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+      else localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // ignore
+    }
+  }, [user]);
+
+  const login = useCallback(async (email: string, password?: string) => {
+    const res = await fetch(`${API_BASE}/api/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: password || 'password' })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Login failed');
+    
+    localStorage.setItem('omomo_auth_token', data.token);
+    
+    // Attempt to preserve targets if switching users or re-logging
+    const raw = localStorage.getItem(STORAGE_KEY);
+    let localTargets = { calories: 2000, protein: 120, fats: 65, carbs: 250 };
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed.email === data.user.email && parsed.targets) {
+        localTargets = parsed.targets;
+      }
+    }
+
+    setUser({
+      id: data.user.id,
+      name: data.user.username,
+      email: data.user.email,
+      age: data.user.age,
+      weight: data.user.weight,
+      height: data.user.height,
+      role: data.user.role,
+      isPremium: data.user.isPremium,
+      onboardingCompleted: data.user.onboardingCompleted,
+      targetWeight: data.user.targetWeight,
+      calculatedCalories: data.user.calculatedCalories,
+      targets: localTargets
+    });
+  }, []);
+
+  const register = useCallback(async (name: string, email: string, password?: string) => {
+    const res = await fetch(`${API_BASE}/api/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        username: name || email.split("@")[0], 
+        email, 
+        password: password || 'password',
+        age: 25,
+        weight: 70,
+        height: 170
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Registration failed');
+    
+    localStorage.setItem('omomo_auth_token', data.token);
+    
+    setUser({
+      id: data.user.id,
+      name: data.user.username,
+      email: data.user.email,
+      age: data.user.age,
+      weight: data.user.weight,
+      height: data.user.height,
+      role: data.user.role,
+      isPremium: data.user.isPremium,
+      onboardingCompleted: data.user.onboardingCompleted || false,
+      targetWeight: data.user.targetWeight,
+      calculatedCalories: data.user.calculatedCalories,
+      targets: { calories: 2000, protein: 120, fats: 65, carbs: 250 }
+    });
+  }, []);
+
+  const completeRegistration = useCallback(async (email: string, userData: any) => {
+    const { name, calculatedCalories, targetWeight, weight, height, age, goals } = userData;
+    
+    // Оновлюємо бекенд
+    try {
+      const token = localStorage.getItem('omomo_auth_token');
+      if (token) {
+        await fetch(`${API_BASE}/api/user/onboarding`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            username: name,
+            calculatedCalories,
+            targetWeight,
+            weight,
+            height,
+            age,
+            goals
+          })
+        });
+      }
+    } catch (e) {
+      console.error("Помилка збереження онбордінгу на бекенд:", e);
+    }
+    
+    // This updates the local context properties
+    setUser(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        name: name || prev.name,
+        onboardingCompleted: true,
+        targets: { 
+          calories: calculatedCalories || 2000, 
+          protein: Math.round((calculatedCalories || 2000) * 0.25 / 4), 
+          fats: Math.round((calculatedCalories || 2000) * 0.25 / 9), 
+          carbs: Math.round((calculatedCalories || 2000) * 0.5 / 4) 
+        }
+      };
+    });
+  }, []);
+
+  const loginWithGoogle = useCallback(async () => {
+    try {
+      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+      
+      if (!clientId) {
+        throw new Error("Google OAuth не настроен. Создайте файл .env с VITE_GOOGLE_CLIENT_ID");
+      }
+
+      const redirectUri = `${window.location.origin}/auth/google/callback`;
+      const scope = "openid email profile";
+      const responseType = "code";
+      const state = crypto.randomUUID();
+
+      sessionStorage.setItem("google_oauth_state", state);
+
+      const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+        `client_id=${encodeURIComponent(clientId)}&` +
+        `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+        `scope=${encodeURIComponent(scope)}&` +
+        `response_type=${responseType}&` +
+        `state=${encodeURIComponent(state)}`;
+
+      window.location.href = googleAuthUrl;
+    } catch (error) {
+      console.error("Ошибка при входе через Google:", error);
+      throw error;
+    }
+  }, []);
+
+  const logout = useCallback(() => {
+    // Look up the userId before we forget it
+    const userId = user?.id;
+    localStorage.removeItem('omomo_auth_token');
+    localStorage.removeItem(STORAGE_KEY);
+    
+    // Clear all user-specific fitness data caches
+    if (userId) {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.includes(`_${userId}`)) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+    }
+    
+    // Also clear shared onboarding data
+    localStorage.removeItem('omom_profile_extra');
+    localStorage.removeItem('omom_google_user_data');
+    localStorage.removeItem('omomo_user_settings');
+    sessionStorage.clear();
+    
+    setUser(null);
+  }, [user?.id]);
+
+  const updateUser = useCallback((updates: Partial<AuthUser>) => {
+    setUser((u) => {
+      if (!u) {
+        return {
+          id: updates.id || crypto.randomUUID(),
+          name: updates.name || "Пользователь",
+          email: updates.email || "",
+          avatarUrl: updates.avatarUrl,
+          targets: updates.targets || { calories: 2000, protein: 120, fats: 65, carbs: 250 },
+        };
+      }
+      return { ...u, ...updates, targets: { ...u.targets, ...updates.targets } };
+    });
+  }, []);
+
+  const activatePremium = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('omomo_auth_token');
+      if (!token) return;
+      const res = await fetch(`${API_BASE}/api/user/premium/activate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUser(prev => prev ? { ...prev, isPremium: data.user.isPremium } : prev);
+      }
+    } catch (e) {
+      console.error("Premium activation error:", e);
+    }
+  }, []);
+
+  const toggleDevRole = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('omomo_auth_token');
+      if (!token) return;
+      const res = await fetch(`${API_BASE}/api/user/dev/toggle-role`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUser(prev => prev ? { ...prev, role: data.user.role, isPremium: data.user.isPremium } : prev);
+      }
+    } catch (e) {
+      console.error("Dev toggle-role error:", e);
+    }
+  }, []);
+
+  const value = useMemo<AuthContextValue>(
+    () => ({ 
+      user, 
+      isAuthenticated: !!user, 
+      isLoading,
+      login, 
+      register, 
+      completeRegistration, 
+      loginWithGoogle, 
+      logout, 
+      updateUser,
+      activatePremium,
+      toggleDevRole
+    }),
+    [user, isLoading, login, register, completeRegistration, loginWithGoogle, logout, updateUser, activatePremium, toggleDevRole],
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
+  return ctx;
+}
+
+
+
+
+/* Кінець файлу: src/hooks/useAuth.tsx */
+
+
+/* ============================================================================
+   ФАЙЛ: src/hooks/useSmartFridge.tsx
+   ОПИС: Модуль управління "розумним" холодильником, обліку продуктів та термінів придатності
+   ============================================================================ */
+
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { 
+  SmartFridgeProduct, 
+  ShoppingListItem, 
+  RecipeMatch, 
+  FridgeAnalytics,
+  getExpiryStatus,
+  calculateRecipeMatch,
+  generateFridgeAnalytics,
+  STORAGE_KEYS,
+  DEFAULT_PANTRY_ITEMS,
+  ProductCategory,
+  UnitType
+} from "@/lib/smart-fridge";
+import { apiService } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+
+const API_BASE = import.meta.env.PROD
+  ? (import.meta.env.VITE_API_BASE_URL && !import.meta.env.VITE_API_BASE_URL.includes('localhost') ? import.meta.env.VITE_API_BASE_URL : '')
+  : (import.meta.env.VITE_API_BASE_URL || '');
+
+export function useSmartFridge() {
+  const [products, setProducts] = useState<SmartFridgeProduct[]>([]);
+  const [shoppingList, setShoppingList] = useState<ShoppingListItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const { isAuthenticated } = useAuth();
+
+  // Load data from API on mount
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const fetchFridgeData = async () => {
+      const token = localStorage.getItem('omomo_auth_token');
+      if (!token) return;
+
+      try {
+        const [fridgeRes, shoppingRes] = await Promise.all([
+          fetch(`${API_BASE}/api/fridge`, { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch(`${API_BASE}/api/shopping`, { headers: { 'Authorization': `Bearer ${token}` } })
+        ]);
+
+        const fridgeData = await fridgeRes.json();
+        const shoppingData = await shoppingRes.json();
+
+        if (fridgeData.products) {
+          setProducts(fridgeData.products.map((p: any) => ({
+            id: p._id,
+            name: p.name,
+            category: p.category,
+            quantity: { amount: p.quantity, unit: p.unit },
+            expiryDate: p.expiryDate,
+            addedDate: p.addedAt,
+            isInPantry: false,
+            barcode: p.barcode,
+            imageUrl: p.imageUrl,
+            nutrition: { calories: 0, protein: 0, fat: 0, carbs: 0 } // Default for now
+          })));
+        }
+
+        if (shoppingData.items) {
+          setShoppingList(shoppingData.items.map((i: any) => ({
+            id: i._id,
+            name: i.name,
+            category: i.category,
+            quantity: { amount: i.amount || 1, unit: i.unit || 'шт' },
+            isCompleted: i.isBought,
+            addedDate: i.createdAt
+          })));
+        }
+      } catch (error) {
+        console.error("Error loading fridge data from API:", error);
+      }
+    };
+
+    fetchFridgeData();
+  }, [isAuthenticated]);
+
+  // Save data to localStorage is disabled - saving happens directly to API in action functions
+
+  // Search products in database
+  const searchProducts = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    setSearchLoading(true);
+    try {
+      const results = await apiService.searchFoodsWithNutrition(query, 10);
+      setSearchResults(results);
+    } catch (error) {
+      console.error("Error searching products:", error);
+      toast.error("Помилка пошуку продуктів");
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  }, []);
+
+  // Add product to fridge
+  const addProduct = useCallback((productData: Partial<SmartFridgeProduct>) => {
+    const newProduct: SmartFridgeProduct = {
+      id: crypto.randomUUID(),
+      name: productData.name || "",
+      brand: productData.brand,
+      barcode: productData.barcode,
+      category: productData.category || "Інше",
+      quantity: productData.quantity || { amount: 1, unit: "шт" },
+      expiryDate: productData.expiryDate,
+      addedDate: new Date().toISOString(),
+      isInPantry: productData.isInPantry || false,
+      nutrition: productData.nutrition || {
+        calories: 0,
+        protein: 0,
+        fat: 0,
+        carbs: 0
+      },
+      imageUrl: productData.imageUrl,
+      notes: productData.notes
+    };
+
+    const token = localStorage.getItem('omomo_auth_token');
+    if (token) {
+      fetch(`${API_BASE}/api/fridge`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          name: newProduct.name,
+          category: newProduct.category,
+          quantity: newProduct.quantity.amount,
+          unit: newProduct.quantity.unit,
+          expiryDate: newProduct.expiryDate,
+          barcode: newProduct.barcode,
+          imageUrl: newProduct.imageUrl
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.product) {
+          setProducts(prev => [{...newProduct, id: data.product._id}, ...prev]);
+        }
+      })
+      .catch(console.error);
+    } else {
+      setProducts(prev => [newProduct, ...prev]);
+    }
+    
+    toast.success("Продукт додано до холодильника!");
+    return newProduct;
+  }, []);
+
+  // Add product from search results
+  const addProductFromSearch = useCallback((searchResult: any, quantity: { amount: number; unit: UnitType }, expiryDate?: string) => {
+    const productData: Partial<SmartFridgeProduct> = {
+      name: searchResult.food_name,
+      category: determineCategory(searchResult.food_name),
+      quantity,
+      expiryDate,
+      nutrition: {
+        calories: searchResult.calories || 0,
+        protein: searchResult.protein || 0,
+        fat: searchResult.fat || 0,
+        carbs: searchResult.carbohydrate || 0
+      }
+    };
+
+    return addProduct(productData);
+  }, [addProduct]);
+
+  const removeProduct = useCallback((productId: string, addToShoppingListFlag?: boolean) => {
+    const product = products.find(p => p.id === productId);
+    
+    const token = localStorage.getItem('omomo_auth_token');
+    if (token) {
+      fetch(`${API_BASE}/api/fridge/${productId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      }).catch(console.error);
+    }
+    
+    setProducts(prev => prev.filter(p => p.id !== productId));
+    
+    if (product && addToShoppingListFlag) {
+      addToShoppingList(product, "low_stock");
+    } else {
+      toast.success("Продукт видалено з холодильника");
+    }
+  }, [products]);
+
+  // Update product
+  const updateProduct = useCallback((productId: string, updates: Partial<SmartFridgeProduct>) => {
+    const token = localStorage.getItem('omomo_auth_token');
+    if (token) {
+      fetch(`${API_BASE}/api/fridge/${productId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(updates)
+      }).catch(console.error);
+    }
+    
+    setProducts(prev => prev.map(p => 
+      p.id === productId ? { ...p, ...updates } : p
+    ));
+    toast.success("Продукт оновлено");
+  }, []);
+
+  // Mark product as used
+  const markProductAsUsed = useCallback((productId: string) => {
+    updateProduct(productId, { lastUsedDate: new Date().toISOString() });
+  }, [updateProduct]);
+
+  // Add to shopping list
+  const addToShoppingList = useCallback((product: SmartFridgeProduct, source: ShoppingListItem["source"] = "manual") => {
+    const existingItem = shoppingList.find(item => 
+      item.name.toLowerCase() === product.name.toLowerCase()
+    );
+
+    if (existingItem) {
+      toast.info("Продукт вже є в списку покупок");
+      return;
+    }
+
+    const newItem: ShoppingListItem = {
+      id: crypto.randomUUID(),
+      name: product.name,
+      category: product.category,
+      quantity: product.quantity,
+      isCompleted: false,
+      addedDate: new Date().toISOString(),
+      source,
+      priority: source === "fridge_expired" ? "high" : "medium"
+    };
+
+    const token = localStorage.getItem('omomo_auth_token');
+    if (token) {
+      fetch(`${API_BASE}/api/shopping`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          name: newItem.name,
+          category: newItem.category,
+          amount: newItem.quantity.amount,
+          unit: newItem.quantity.unit,
+          isBought: false
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.item) {
+          setShoppingList(prev => [{...newItem, id: data.item._id}, ...prev]);
+        }
+      })
+      .catch(console.error);
+    } else {
+      setShoppingList(prev => [newItem, ...prev]);
+    }
+
+    toast.success("Додано до списку покупок");
+  }, [shoppingList]);
+
+  // Remove from shopping list
+  const removeFromShoppingList = useCallback((itemId: string) => {
+    const token = localStorage.getItem('omomo_auth_token');
+    if (token) {
+      fetch(`${API_BASE}/api/shopping/${itemId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      }).catch(console.error);
+    }
+    
+    setShoppingList(prev => prev.filter(item => item.id !== itemId));
+    toast.success("Видалено зі списку покупок");
+  }, []);
+
+  // Toggle shopping list item completion
+  const toggleShoppingListItem = useCallback((itemId: string) => {
+    const item = shoppingList.find(i => i.id === itemId);
+    if (!item) return;
+    
+    const token = localStorage.getItem('omomo_auth_token');
+    if (token) {
+      fetch(`${API_BASE}/api/shopping/${itemId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ isBought: !item.isCompleted })
+      }).catch(console.error);
+    }
+    
+    setShoppingList(prev => prev.map(item => 
+      item.id === itemId ? { ...item, isCompleted: !item.isCompleted } : item
+    ));
+  }, [shoppingList]);
+
+  // Get recipe matches
+  const getRecipeMatches = useCallback(async (): Promise<RecipeMatch[]> => {
+    // Filter only fridge products (exclude pantry items)
+    const fridgeProductsList = products.filter(p => !p.isInPantry);
+    
+    if (fridgeProductsList.length === 0) return [];
+
+    setLoading(true);
+    try {
+      const ingredientNames = fridgeProductsList.map(p => p.name.trim());
+      
+      if (ingredientNames.length === 0) return [];
+
+      const allRecipes: any[] = [];
+      
+      // Search for recipes with available ingredients (use up to 5 ingredients for better variety)
+      const searchIngredients = ingredientNames.slice(0, 5);
+      for (const ingredient of searchIngredients) {
+        try {
+          const result = await apiService.searchRecipes(ingredient, { number: 8 });
+          allRecipes.push(...result.recipes);
+        } catch (error) {
+          console.error(`Error searching recipes for ${ingredient}:`, error);
+        }
+      }
+
+      // Remove duplicates and calculate matches
+      const uniqueRecipes = allRecipes.filter((recipe, index, self) => 
+        index === self.findIndex(r => r.id === recipe.id)
+      );
+
+      // Use only fridge products for matching calculation
+      const matches = uniqueRecipes
+        .map(recipe => calculateRecipeMatch(recipe, fridgeProductsList))
+        .filter(match => match.matchScore > 0)
+        .sort((a, b) => b.matchScore - a.matchScore)
+        .slice(0, 15); // Increase limit for more options
+
+      return matches;
+    } catch (error) {
+      console.error("Error getting recipe matches:", error);
+      toast.error("Помилка завантаження рецептів");
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }, [products]);
+
+  // Computed values
+  const analytics = useMemo(() => generateFridgeAnalytics(products), [products]);
+
+  const expiredProducts = useMemo(() => 
+    products.filter(p => getExpiryStatus(p.expiryDate).status === "expired"),
+    [products]
+  );
+
+  const expiringProducts = useMemo(() => 
+    products.filter(p => getExpiryStatus(p.expiryDate).status === "expiring"),
+    [products]
+  );
+
+  const fridgeProducts = useMemo(() => 
+    products.filter(p => !p.isInPantry),
+    [products]
+  );
+
+  const pantryProducts = useMemo(() => 
+    products.filter(p => p.isInPantry),
+    [products]
+  );
+
+  const completedShoppingItems = useMemo(() => 
+    shoppingList.filter(item => item.isCompleted),
+    [shoppingList]
+  );
+
+  const pendingShoppingItems = useMemo(() => 
+    shoppingList.filter(item => !item.isCompleted),
+    [shoppingList]
+  );
+
+  return {
+    // Data
+    products,
+    fridgeProducts,
+    pantryProducts,
+    shoppingList,
+    searchResults,
+    analytics,
+    expiredProducts,
+    expiringProducts,
+    completedShoppingItems,
+    pendingShoppingItems,
+    
+    // Loading states
+    loading,
+    searchLoading,
+    
+    // Actions
+    searchProducts,
+    addProduct,
+    addProductFromSearch,
+    removeProduct,
+    updateProduct,
+    markProductAsUsed,
+    addToShoppingList,
+    removeFromShoppingList,
+    toggleShoppingListItem,
+    getRecipeMatches
+  };
+}
+
+// Helper function to determine category from product name
+function determineCategory(productName: string): ProductCategory {
+  const name = productName.toLowerCase();
+  
+  if (name.includes("м'ясо") || name.includes("риба") || name.includes("курятина") || name.includes("свинина") || name.includes("яловичина")) {
+    return "М'ясо та риба";
+  }
+  if (name.includes("молоко") || name.includes("сир") || name.includes("йогурт") || name.includes("творог") || name.includes("масло")) {
+    return "Молочні продукти";
+  }
+  if (name.includes("овоч") || name.includes("фрукт") || name.includes("яблуко") || name.includes("банан") || name.includes("помидор")) {
+    return "Овочі та фрукти";
+  }
+  if (name.includes("крупа") || name.includes("рис") || name.includes("гречка") || name.includes("макарон") || name.includes("борошно")) {
+    return "Крупи та макарони";
+  }
+  if (name.includes("консерв") || name.includes("банка")) {
+    return "Консерви";
+  }
+  if (name.includes("заморожен") || name.includes("морозилк")) {
+    return "Заморожені продукти";
+  }
+  if (name.includes("напій") || name.includes("сік") || name.includes("вода") || name.includes("чай") || name.includes("кава")) {
+    return "Напої";
+  }
+  if (name.includes("солод") || name.includes("цукерк") || name.includes("торт") || name.includes("печиво")) {
+    return "Солодощі";
+  }
+  if (name.includes("спеці") || name.includes("приправ") || name.includes("сіль") || name.includes("перець")) {
+    return "Спеції та приправи";
+  }
+  if (name.includes("хліб") || name.includes("булочк") || name.includes("випічк")) {
+    return "Хліб та випічка";
+  }
+  
+  return "Інше";
+}
+
+
+/* Кінець файлу: src/hooks/useSmartFridge.tsx */
+
+
+/* ============================================================================
+   ФАЙЛ: src/hooks/useWorkouts.tsx
+   ОПИС: Модуль обліку тренувань, вправ та розрахунку спалених калорій
+   ============================================================================ */
+
+import { useState, useEffect, useCallback, useMemo } from 'react';
+
+const API_BASE = import.meta.env.PROD
+  ? (import.meta.env.VITE_API_BASE_URL && !import.meta.env.VITE_API_BASE_URL.includes('localhost') ? import.meta.env.VITE_API_BASE_URL : '')
+  : (import.meta.env.VITE_API_BASE_URL || '');
+import { 
+  Exercise, 
+  WorkoutProgram, 
+  WorkoutDay, 
+  WorkoutExercise, 
+  ExerciseSet, 
+  PlannedWorkout, 
+  CompletedWorkout, 
+  PersonalRecord, 
+  WorkoutGoal, 
+  WorkoutStats,
+  MuscleGroup,
+  Difficulty,
+  WorkoutGoalType
+} from '@/lib/workout-types';
+import { EXERCISES_DATABASE, getExerciseById, searchExercises } from '@/lib/exercises-database';
+import { WORKOUT_PROGRAMS, getProgramById } from '@/lib/workout-programs';
+import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
+
+const STORAGE_KEYS = {
+  PLANNED_WORKOUTS: 'omomo_planned_workouts',
+  COMPLETED_WORKOUTS: 'omomo_completed_workouts',
+  PERSONAL_RECORDS: 'omomo_personal_records',
+  WORKOUT_GOALS: 'omomo_workout_goals',
+  CUSTOM_EXERCISES: 'omomo_custom_exercises',
+  CUSTOM_PROGRAMS: 'omomo_custom_programs'
+};
+
+const getStorageKey = (key: string, userId?: string) => `${key}_${userId || 'guest'}`;
+
+export function useWorkouts() {
+  const [plannedWorkouts, setPlannedWorkouts] = useState<PlannedWorkout[]>([]);
+  const [completedWorkouts, setCompletedWorkouts] = useState<CompletedWorkout[]>([]);
+  const [personalRecords, setPersonalRecords] = useState<PersonalRecord[]>([]);
+  const [workoutGoals, setWorkoutGoals] = useState<WorkoutGoal[]>([]);
+  const [customExercises, setCustomExercises] = useState<Exercise[]>([]);
+  const [customPrograms, setCustomPrograms] = useState<WorkoutProgram[]>([]);
+  const [isLiveMode, setIsLiveMode] = useState(false);
+  const [currentWorkout, setCurrentWorkout] = useState<PlannedWorkout | null>(null);
+  
+  const { user, isAuthenticated } = useAuth();
+
+  // Загрузка данных из API
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setPlannedWorkouts([]);
+      setCompletedWorkouts([]);
+      setPersonalRecords([]);
+      setWorkoutGoals([]);
+      setCustomExercises([]);
+      setCustomPrograms([]);
+      return;
+    }
+
+    // Load from database
+    const token = localStorage.getItem('omomo_auth_token');
+    if (token) {
+      Promise.all([
+        fetch(`${API_BASE}/api/workouts/planned`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.json()),
+        fetch(`${API_BASE}/api/workouts/completed`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.json()),
+        fetch(`${API_BASE}/api/workouts/records`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.json()),
+        fetch(`${API_BASE}/api/workouts/goals`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.json()),
+        fetch(`${API_BASE}/api/workouts/exercises`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.json()),
+        fetch(`${API_BASE}/api/workouts/programs`, { headers: { 'Authorization': `Bearer ${token}` } }).then(res => res.json())
+      ])
+      .then(([plannedData, completedData, recordsData, goalsData, exercisesData, programsData]) => {
+        if (plannedData.planned) setPlannedWorkouts(plannedData.planned.map((w: any) => ({ id: w._id, ...w })));
+        if (completedData.completed) setCompletedWorkouts(completedData.completed.map((w: any) => ({ id: w._id, ...w })));
+        if (recordsData.records) setPersonalRecords(recordsData.records.map((r: any) => ({ id: r._id, ...r })));
+        if (goalsData.goals) setWorkoutGoals(goalsData.goals.map((g: any) => ({ id: g._id, ...g })));
+        if (exercisesData.exercises) setCustomExercises(exercisesData.exercises.map((e: any) => ({ id: e._id, ...e })));
+        if (programsData.programs) setCustomPrograms(programsData.programs.map((p: any) => ({ id: p._id, ...p })));
+      })
+      .catch(console.error);
+    }
+  }, [isAuthenticated, user?.id]);
+
+  // Сохранение данных в localStorage відключено, працюємо з БД
+
+  // Получение всех упражнений (встроенные + пользовательские)
+  const allExercises = useMemo(() => {
+    return [...EXERCISES_DATABASE, ...customExercises];
+  }, [customExercises]);
+
+  // Получение всех программ (встроенные + пользовательские)
+  const allPrograms = useMemo(() => {
+    return [...WORKOUT_PROGRAMS, ...customPrograms];
+  }, [customPrograms]);
+
+  // Планирование тренировки
+  const planWorkout = useCallback((workout: Omit<PlannedWorkout, 'id'>) => {
+    const token = localStorage.getItem('omomo_auth_token');
+    if (isAuthenticated && token) {
+      fetch(`${API_BASE}/api/workouts/planned`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(workout)
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.planned) {
+          setPlannedWorkouts(prev => [...prev, { id: data.planned._id, ...data.planned }]);
+          toast.success('Тренування заплановано!');
+        }
+      })
+      .catch(console.error);
+    } else {
+      const newWorkout: PlannedWorkout = {
+        ...workout,
+        id: crypto.randomUUID()
+      };
+      setPlannedWorkouts(prev => [...prev, newWorkout]);
+      toast.success('Тренування заплановано!');
+    }
+  }, [isAuthenticated]);
+
+  // Планирование тренировки из программы
+  const planWorkoutFromProgram = useCallback((programId: string, dayId: string, scheduledDate: string) => {
+    const program = getProgramById(programId);
+    if (!program) {
+      toast.error('Програма не знайдена');
+      return;
+    }
+
+    const day = program.days.find(d => d.id === dayId);
+    if (!day) {
+      toast.error('День тренування не знайдено');
+      return;
+    }
+
+    const plannedWorkout = {
+      programId,
+      dayId,
+      name: day.nameUk,
+      exercises: day.exercises.map(ex => ({
+        ...ex,
+        sets: ex.sets.map(set => ({ ...set, isCompleted: false }))
+      })),
+      scheduledDate,
+      isCompleted: false
+    };
+
+    planWorkout(plannedWorkout);
+  }, [planWorkout]);
+
+  // Начало тренировки (Live режим)
+  const startWorkout = useCallback((workoutId: string) => {
+    const workout = plannedWorkouts.find(w => w.id === workoutId);
+    if (!workout) {
+      toast.error('Тренування не знайдено');
+      return;
+    }
+
+    setCurrentWorkout(workout);
+    setIsLiveMode(true);
+    toast.success('Тренування розпочато!');
+  }, [plannedWorkouts]);
+
+  // Завершение подхода
+  const completeSet = useCallback((workoutId: string, exerciseId: string, setId: string, weight: number, reps: number) => {
+    if (!currentWorkout || currentWorkout.id !== workoutId) return;
+
+    setCurrentWorkout(prev => {
+      if (!prev) return null;
+
+      const updatedWorkout = { ...prev };
+      const exercise = updatedWorkout.exercises.find(ex => ex.id === exerciseId);
+      if (exercise) {
+        const set = exercise.sets.find(s => s.id === setId);
+        if (set) {
+          set.weight = weight;
+          set.reps = reps;
+          set.isCompleted = true;
+        }
+      }
+      return updatedWorkout;
+    });
+  }, [currentWorkout]);
+
+  // Завершение тренировки
+  const completeWorkout = useCallback(() => {
+    if (!currentWorkout) return;
+
+    const endTime = new Date().toISOString();
+    const startTime = new Date().toISOString();
+    const duration = Math.max(15, Math.floor((new Date(endTime).getTime() - new Date(startTime).getTime()) / 60000)) || 45;
+
+    // Подсчет общего объема
+    const totalVolume = currentWorkout.exercises.reduce((total, exercise) => {
+      return total + exercise.sets.reduce((exerciseTotal, set) => {
+        return exerciseTotal + (set.weight * set.reps);
+      }, 0);
+    }, 0);
+
+    // Проверка на личные рекорды
+    const newRecords: PersonalRecord[] = [];
+    currentWorkout.exercises.forEach(exercise => {
+      const maxWeight = Math.max(...exercise.sets.map(set => set.weight), 0);
+      const maxReps = Math.max(...exercise.sets.map(set => set.reps), 0);
+
+      // Проверяем рекорды по весу
+      const existingWeightRecord = personalRecords.find(record => 
+        record.exerciseId === exercise.exercise.id && record.recordType === 'max_weight'
+      );
+      if (!existingWeightRecord || maxWeight > existingWeightRecord.value) {
+        newRecords.push({
+          id: crypto.randomUUID(),
+          exerciseId: exercise.exercise.id,
+          exerciseName: exercise.exercise.nameUk,
+          recordType: 'max_weight',
+          value: maxWeight,
+          unit: 'кг',
+          date: endTime,
+          workoutId: currentWorkout.id
+        });
+      }
+
+      // Проверяем рекорды по повторениям
+      const existingRepsRecord = personalRecords.find(record => 
+        record.exerciseId === exercise.exercise.id && record.recordType === 'max_reps'
+      );
+      if (!existingRepsRecord || maxReps > existingRepsRecord.value) {
+        newRecords.push({
+          id: crypto.randomUUID(),
+          exerciseId: exercise.exercise.id,
+          exerciseName: exercise.exercise.nameUk,
+          recordType: 'max_reps',
+          value: maxReps,
+          unit: 'раз',
+          date: endTime,
+          workoutId: currentWorkout.id
+        });
+      }
+    });
+
+    const completedWorkoutObj = {
+      plannedWorkoutId: currentWorkout.id,
+      name: currentWorkout.name,
+      exercises: currentWorkout.exercises,
+      startTime,
+      endTime,
+      duration,
+      totalVolume,
+      personalRecords: newRecords,
+      rating: 5
+    };
+
+    // Sync workout to backend
+    const token = localStorage.getItem('omomo_auth_token');
+    if (token && isAuthenticated) {
+      // 1. Save completed workout
+      fetch(`${API_BASE}/api/workouts/completed`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(completedWorkoutObj)
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.completed) {
+          const completedWorkout = { id: data.completed._id, ...data.completed };
+          setCompletedWorkouts(prev => [completedWorkout, ...prev].sort((a,b) => new Date(b.endTime).getTime() - new Date(a.endTime).getTime()));
+          
+          // Save personal records
+          newRecords.forEach(rec => {
+            fetch(`${API_BASE}/api/workouts/records`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              body: JSON.stringify(rec)
+            }).catch(console.error);
+          });
+
+          // Mark planned workout as completed
+          if (currentWorkout.id && !currentWorkout.id.includes('-')) {
+            fetch(`${API_BASE}/api/workouts/planned/${currentWorkout.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              body: JSON.stringify({ isCompleted: true, completedDate: endTime })
+            }).catch(console.error);
+          }
+        }
+      })
+      .catch(console.error);
+    } else {
+      // Guest
+      const completedWorkout: CompletedWorkout = {
+        id: crypto.randomUUID(),
+        ...completedWorkoutObj
+      };
+      setCompletedWorkouts(prev => [completedWorkout, ...prev].sort((a,b) => new Date(b.endTime).getTime() - new Date(a.endTime).getTime()));
+      setPersonalRecords(prev => [...prev, ...newRecords]);
+      setPlannedWorkouts(prev => prev.map(w => 
+        w.id === currentWorkout.id 
+          ? { ...w, isCompleted: true, completedDate: endTime }
+          : w
+      ));
+    }
+
+    // Выходим из Live режима
+    setIsLiveMode(false);
+    setCurrentWorkout(null);
+
+    toast.success(`Тренування завершено! Тривалість: ${duration} хв, Об'єм: ${totalVolume} кг`);
+  }, [currentWorkout, personalRecords, isAuthenticated]);
+
+  // Отмена тренировки
+  const cancelWorkout = useCallback(() => {
+    setIsLiveMode(false);
+    setCurrentWorkout(null);
+    toast.info('Тренування скасовано');
+  }, []);
+
+  // Удаление запланированной тренировки
+  const removePlannedWorkout = useCallback((workoutId: string) => {
+    const token = localStorage.getItem('omomo_auth_token');
+    if (token && isAuthenticated && !workoutId.includes('-')) {
+      fetch(`${API_BASE}/api/workouts/planned/${workoutId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setPlannedWorkouts(prev => prev.filter(w => w.id !== workoutId));
+          toast.success('Тренування видалено з плану');
+        }
+      })
+      .catch(console.error);
+    } else {
+      setPlannedWorkouts(prev => prev.filter(w => w.id !== workoutId));
+      toast.success('Тренування видалено з плану');
+    }
+  }, [isAuthenticated]);
+
+  // Добавление цели
+  const addWorkoutGoal = useCallback((goal: Omit<WorkoutGoal, 'id'>) => {
+    const token = localStorage.getItem('omomo_auth_token');
+    if (token && isAuthenticated) {
+      fetch(`${API_BASE}/api/workouts/goals`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(goal)
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.goal) {
+          setWorkoutGoals(prev => [...prev, { id: data.goal._id, ...data.goal }]);
+          toast.success('Ціль додано!');
+        }
+      })
+      .catch(console.error);
+    } else {
+      const newGoal: WorkoutGoal = {
+        ...goal,
+        id: crypto.randomUUID()
+      };
+      setWorkoutGoals(prev => [...prev, newGoal]);
+      toast.success('Ціль додано!');
+    }
+  }, [isAuthenticated]);
+
+  // Обновление цели
+  const updateWorkoutGoal = useCallback((goalId: string, updates: Partial<WorkoutGoal>) => {
+    const token = localStorage.getItem('omomo_auth_token');
+    if (token && isAuthenticated && !goalId.includes('-')) {
+      fetch(`${API_BASE}/api/workouts/goals/${goalId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(updates)
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.goal) {
+          setWorkoutGoals(prev => prev.map(goal => 
+            goal.id === goalId ? { ...goal, ...updates } : goal
+          ));
+        }
+      })
+      .catch(console.error);
+    } else {
+      setWorkoutGoals(prev => prev.map(goal => 
+        goal.id === goalId ? { ...goal, ...updates } : goal
+      ));
+    }
+  }, [isAuthenticated]);
+
+  // Удаление цели
+  const removeWorkoutGoal = useCallback((goalId: string) => {
+    const token = localStorage.getItem('omomo_auth_token');
+    if (token && isAuthenticated && !goalId.includes('-')) {
+      fetch(`${API_BASE}/api/workouts/goals/${goalId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setWorkoutGoals(prev => prev.filter(goal => goal.id !== goalId));
+          toast.success('Ціль видалено');
+        }
+      })
+      .catch(console.error);
+    } else {
+      setWorkoutGoals(prev => prev.filter(goal => goal.id !== goalId));
+      toast.success('Ціль видалено');
+    }
+  }, [isAuthenticated]);
+
+  // Добавление пользовательского упражнения
+  const addCustomExercise = useCallback((exercise: Omit<Exercise, 'id'>) => {
+    const token = localStorage.getItem('omomo_auth_token');
+    if (token && isAuthenticated) {
+      fetch(`${API_BASE}/api/workouts/exercises`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(exercise)
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.exercise) {
+          setCustomExercises(prev => [...prev, { id: data.exercise._id, ...data.exercise }]);
+          toast.success('Вправу додано!');
+        }
+      })
+      .catch(console.error);
+    } else {
+      const newExercise: Exercise = {
+        ...exercise,
+        id: crypto.randomUUID(),
+        isCustom: true
+      };
+      setCustomExercises(prev => [...prev, newExercise]);
+      toast.success('Вправу додано!');
+    }
+  }, [isAuthenticated]);
+
+  // Статистика тренировок
+  const workoutStats = useMemo((): WorkoutStats => {
+    const totalWorkouts = completedWorkouts.length;
+    const totalDuration = completedWorkouts.reduce((sum, workout) => sum + workout.duration, 0);
+    const totalVolume = completedWorkouts.reduce((sum, workout) => sum + (workout.totalVolume || 0), 0);
+    const averageWorkoutDuration = totalWorkouts > 0 ? totalDuration / totalWorkouts : 0;
+
+    // Частота тренировки мышечных групп
+    const muscleGroupFrequency: Record<MuscleGroup, number> = {} as Record<MuscleGroup, number>;
+    completedWorkouts.forEach(workout => {
+      workout.exercises?.forEach(exercise => {
+        muscleGroupFrequency[exercise.exercise.primaryMuscleGroup] = 
+          (muscleGroupFrequency[exercise.exercise.primaryMuscleGroup] || 0) + 1;
+      });
+    });
+
+    // Любимые упражнения
+    const exerciseFrequency: Record<string, { name: string; count: number }> = {};
+    completedWorkouts.forEach(workout => {
+      workout.exercises?.forEach(exercise => {
+        const key = exercise.exercise.id;
+        if (!exerciseFrequency[key]) {
+          exerciseFrequency[key] = { name: exercise.exercise.nameUk, count: 0 };
+        }
+        exerciseFrequency[key].count++;
+      });
+    });
+
+    const favoriteExercises = Object.entries(exerciseFrequency)
+      .map(([exerciseId, data]) => ({ exerciseId, exerciseName: data.name, frequency: data.count }))
+      .sort((a, b) => b.frequency - a.frequency)
+      .slice(0, 5);
+
+    // Прогресс по упражнениям
+    const progressByExercise: Record<string, Array<{ date: string; maxWeight: number; maxReps: number }>> = {};
+    completedWorkouts.forEach(workout => {
+      workout.exercises?.forEach(exercise => {
+        const key = exercise.exercise.id;
+        if (!progressByExercise[key]) {
+          progressByExercise[key] = [];
+        }
+        const maxWeight = Math.max(...exercise.sets.map(set => set.weight), 0);
+        const maxReps = Math.max(...exercise.sets.map(set => set.reps), 0);
+        progressByExercise[key].push({
+          date: workout.endTime,
+          maxWeight,
+          maxReps
+        });
+      });
+    });
+
+    return {
+      totalWorkouts,
+      totalDuration,
+      totalVolume,
+      averageWorkoutDuration,
+      personalRecords,
+      muscleGroupFrequency,
+      weeklyVolume: [], // TODO: реализовать подсчет недельного объема
+      monthlyVolume: [], // TODO: реализовать подсчет месячного объема
+      favoriteExercises,
+      progressByExercise
+    };
+  }, [completedWorkouts, personalRecords]);
+
+  // Получение тренировок по дате
+  const getWorkoutsByDate = useCallback((date: string) => {
+    const targetDate = new Date(date).toDateString();
+    return {
+      planned: plannedWorkouts.filter(w => 
+        new Date(w.scheduledDate).toDateString() === targetDate
+      ),
+      completed: completedWorkouts.filter(w => 
+        new Date(w.endTime).toDateString() === targetDate
+      )
+    };
+  }, [plannedWorkouts, completedWorkouts]);
+
+  return {
+    // Данные
+    allExercises,
+    allPrograms,
+    plannedWorkouts,
+    completedWorkouts,
+    personalRecords,
+    workoutGoals,
+    customExercises,
+    customPrograms,
+    workoutStats,
+    
+    // Состояние Live режима
+    isLiveMode,
+    currentWorkout,
+    
+    // Функции планирования
+    planWorkout,
+    planWorkoutFromProgram,
+    removePlannedWorkout,
+    
+    // Функции выполнения
+    startWorkout,
+    completeSet,
+    completeWorkout,
+    cancelWorkout,
+    
+    // Функции целей
+    addWorkoutGoal,
+    updateWorkoutGoal,
+    removeWorkoutGoal,
+    
+    // Функции упражнений
+    addCustomExercise,
+    
+    // Утилиты
+    getWorkoutsByDate,
+    searchExercises
+  };
+}
+
+
+/* Кінець файлу: src/hooks/useWorkouts.tsx */
+
+
+/* ============================================================================
+   ФАЙЛ: src/pages/AICoach.tsx
+   ОПИС: Інтерфейс та інтеграція з AI-тренером (чат на базі штучного інтелекту)
+   ============================================================================ */
+
+import { DashboardSidebar } from "@/components/DashboardSidebar";
+import { MobileHeader } from "@/components/MobileHeader";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { AICoachChat } from "@/components/AICoachChat";
+import { Card } from "@/components/ui/card";
+import { motion } from "framer-motion";
+import { useI18n } from "@/hooks/useI18n";
+
+export default function AICoach() {
+  const { t } = useI18n();
+  
+  return (
+    <div className="flex min-h-screen w-full bg-background">
+      <DashboardSidebar />
+      <div className="flex-1 min-w-0">
+        <MobileHeader />
+        <main className="p-4 pb-20 md:pb-8 md:p-8 max-w-4xl mx-auto w-full">
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Card className="p-6 bg-gradient-to-r from-primary/5 to-primary/10 border-2 border-primary/20 shadow-lg mb-6">
+              <div className="text-center">
+                <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
+                  {t("aiCoachTitle")}
+                </h1>
+                <p className="text-muted-foreground">
+                  {t("personalAssistant")}
+                </p>
+              </div>
+            </Card>
+          </motion.div>
+
+          {/* Chat Interface */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="h-[calc(100vh-180px)] sm:h-[calc(100vh-200px)]"
+          >
+            <AICoachChat />
+          </motion.div>
+        </main>
+        <MobileBottomNav />
+      </div>
+    </div>
+  );
+}
+
+
+/* Кінець файлу: src/pages/AICoach.tsx */
+
+
+/* ============================================================================
+   ФАЙЛ: src/pages/SmartFridge.tsx
+   ОПИС: Візуальний інтерфейс управління продуктами та розпізнавання чеків
+   ============================================================================ */
+
+import { DashboardSidebar } from "@/components/DashboardSidebar";
+import { MobileHeader } from "@/components/MobileHeader";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { FridgeHeaderBar } from "@/components/FridgeHeaderBar";
+import { FridgeTabsNav } from "@/components/FridgeTabsNav";
+import { FridgeStatCards } from "@/components/FridgeStatCards";
+import { FridgeSearchFilters } from "@/components/FridgeSearchFilters";
+import { FridgeProductGrid } from "@/components/FridgeProductGrid";
+import { FridgeEmptyState } from "@/components/FridgeEmptyState";
+import { FridgeRecommendations } from "@/components/FridgeRecommendations";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { 
+  Utensils, 
+  ShoppingCart, 
+  BarChart3,
+  CheckCircle,
+  Circle,
+  Trash2,
+  Package,
+  AlertTriangle,
+  Clock,
+  TrendingUp
+} from "lucide-react";
+import { useSmartFridge } from "@/hooks/useSmartFridge";
+import { ProductCategory, getExpiryStatus } from "@/lib/smart-fridge";
+import { AddProductModal } from "@/components/AddProductModal";
+import { RecipeDetails } from "@/components/RecipeDetails";
+import { toast } from "sonner";
+
+export default function SmartFridge() {
+  const {
+    products,
+    fridgeProducts,
+    pantryProducts,
+    shoppingList,
+    searchResults,
+    analytics,
+    expiredProducts,
+    expiringProducts,
+    completedShoppingItems,
+    pendingShoppingItems,
+    loading,
+    searchLoading,
+    searchProducts,
+    addProduct,
+    addProductFromSearch,
+    removeProduct,
+    updateProduct,
+    markProductAsUsed,
+    addToShoppingList,
+    removeFromShoppingList,
+    toggleShoppingListItem,
+    getRecipeMatches
+  } = useSmartFridge();
+
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedRecipe, setSelectedRecipe] = useState<any>(null);
+  const [recipeDetailsOpen, setRecipeDetailsOpen] = useState(false);
+  const [recipeMatches, setRecipeMatches] = useState<any[]>([]);
+  const [loadingRecipes, setLoadingRecipes] = useState(false);
+  const [activeTab, setActiveTab] = useState<"fridge" | "recipes" | "shopping" | "analytics">("fridge");
+  
+  // Filter states
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [showExpired, setShowExpired] = useState(false);
+  const [showPantry, setShowPantry] = useState(false);
+
+  const categories: ProductCategory[] = [
+    "М'ясо та риба",
+    "Молочні продукти", 
+    "Овочі та фрукти",
+    "Крупи та макарони",
+    "Консерви",
+    "Заморожені продукти",
+    "Напої",
+    "Солодощі",
+    "Спеції та приправи",
+    "Хліб та випічка",
+    "Інше"
+  ];
+
+  // Filter products
+  const filteredProducts = useMemo(() => {
+    let filtered = showPantry ? pantryProducts : fridgeProducts;
+    
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(product => 
+        product.name.toLowerCase().includes(query) ||
+        product.brand?.toLowerCase().includes(query) ||
+        product.category.toLowerCase().includes(query)
+      );
+    }
+    
+    if (selectedCategory !== "all") {
+      filtered = filtered.filter(product => product.category === selectedCategory);
+    }
+    
+    if (showExpired) {
+      filtered = filtered.filter(product => {
+        const status = getExpiryStatus(product.expiryDate);
+        return status.status === "expired" || status.status === "expiring";
+      });
+    }
+    
+    return filtered;
+  }, [fridgeProducts, pantryProducts, searchQuery, selectedCategory, showExpired, showPantry]);
+
+  // Load recipe matches
+  const loadRecipeMatches = useCallback(async () => {
+    setLoadingRecipes(true);
+    try {
+      const matches = await getRecipeMatches();
+      setRecipeMatches(matches);
+    } catch (error) {
+      console.error("Error loading recipe matches:", error);
+      toast.error("Помилка завантаження рецептів");
+    } finally {
+      setLoadingRecipes(false);
+    }
+  }, [getRecipeMatches]);
+
+  // Auto-load recipes when tab changes to "recipes" or when products change
+  useEffect(() => {
+    if (activeTab === "recipes" && fridgeProducts.length > 0) {
+      loadRecipeMatches();
+    }
+  }, [activeTab, fridgeProducts.length, loadRecipeMatches]);
+
+  const openRecipeDetails = (recipe: any) => {
+    setSelectedRecipe(recipe);
+    setRecipeDetailsOpen(true);
+  };
+
+  const handleProductUsed = (productId: string) => {
+    markProductAsUsed(productId);
+    toast.success("Продукт відмічено як використаний");
+  };
+
+  const handleAddToShoppingList = (product: any) => {
+    addToShoppingList(product, "low_stock");
+  };
+
+  const handleStatCardClick = (type: "total" | "expired" | "expiring" | "pantry") => {
+    switch (type) {
+      case "expired":
+        setShowExpired(true);
+        setActiveTab("fridge");
+        break;
+      case "expiring":
+        setShowExpired(true);
+        setActiveTab("fridge");
+        break;
+      case "pantry":
+        setShowPantry(true);
+        setActiveTab("fridge");
+        break;
+      default:
+        setActiveTab("fridge");
+    }
+  };
+
+  const handleViewExpired = () => {
+    setShowExpired(true);
+    setActiveTab("fridge");
+  };
+
+  const handleViewExpiring = () => {
+    setShowExpired(true);
+    setActiveTab("fridge");
+  };
+
+  const handleViewRecipes = () => {
+    setActiveTab("recipes");
+  };
+
+  const getTabContent = () => {
+    switch (activeTab) {
+      case "fridge":
+        return (
+          <div className="space-y-6">
+            {/* Overview Stats */}
+            <FridgeStatCards
+              totalProducts={fridgeProducts.length}
+              expiredCount={expiredProducts.length}
+              expiringCount={expiringProducts.length}
+              pantryCount={pantryProducts.length}
+              onCardClick={handleStatCardClick}
+            />
+
+            {/* Search & Filters */}
+            <FridgeSearchFilters
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              selectedCategory={selectedCategory}
+              onCategoryChange={setSelectedCategory}
+              showExpired={showExpired}
+              onToggleExpired={() => setShowExpired(!showExpired)}
+              showPantry={showPantry}
+              onTogglePantry={() => setShowPantry(!showPantry)}
+              categories={categories}
+            />
+
+            {/* Product List */}
+            {filteredProducts.length === 0 ? (
+              <FridgeEmptyState
+                isPantry={showPantry}
+                onAddProduct={() => setShowAddModal(true)}
+              />
+            ) : (
+              <FridgeProductGrid
+                products={filteredProducts}
+                onProductUsed={handleProductUsed}
+                onAddToShoppingList={handleAddToShoppingList}
+                onRemoveProduct={removeProduct}
+              />
+            )}
+
+            {/* Smart Recommendations */}
+            <FridgeRecommendations
+              expiredProducts={expiredProducts}
+              expiringProducts={expiringProducts}
+              availableRecipes={recipeMatches}
+              onViewExpired={handleViewExpired}
+              onViewExpiring={handleViewExpiring}
+              onViewRecipes={handleViewRecipes}
+            />
+          </div>
+        );
+
+      case "recipes":
+        return (
+          <div className="space-y-6">
+            <Card className="p-6 bg-card/30 backdrop-blur-sm border border-muted/30 shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Utensils className="w-5 h-5" />
+                  <h3 className="text-lg font-semibold">Рецепти з ваших продуктів</h3>
+                  {fridgeProducts.length > 0 && (
+                    <Badge variant="outline" className="text-xs">
+                      {fridgeProducts.length} продуктів
+                    </Badge>
+                  )}
+                </div>
+                {fridgeProducts.length > 0 && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={loadRecipeMatches}
+                    disabled={loadingRecipes}
+                    className="gap-2 border-2 hover:bg-muted/50"
+                  >
+                    {loadingRecipes ? "Пошук..." : "Оновити рецепти"}
+                  </Button>
+                )}
+              </div>
+              
+              {loadingRecipes ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">Завантаження рецептів...</p>
+                </div>
+              ) : recipeMatches.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {recipeMatches.map((match: any) => (
+                    <Card key={match.recipe.id} className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer" onClick={() => openRecipeDetails(match.recipe)}>
+                      <div className="aspect-video bg-muted relative">
+                        <img 
+                          src={match.recipe.image} 
+                          alt={match.recipe.title}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400";
+                          }}
+                        />
+                        <div className="absolute top-2 right-2">
+                          <Badge 
+                            variant={match.canCook ? "default" : match.needsShopping ? "secondary" : "outline"}
+                            className="text-xs"
+                          >
+                            {match.canCook ? "Можна готувати" : match.needsShopping ? "Потрібно докупити" : `${match.matchScore}% співпадіння`}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="p-4">
+                        <h4 className="font-semibold mb-2 line-clamp-2">{match.recipe.title}</h4>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-4 h-4" />
+                            {match.recipe.readyInMinutes} хв
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Utensils className="w-4 h-4" />
+                            {match.recipe.servings} порцій
+                          </div>
+                        </div>
+                        {match.availableIngredients.length > 0 && (
+                          <div className="mb-3">
+                            <p className="text-xs text-muted-foreground mb-1">Є в холодильнику:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {match.availableIngredients.slice(0, 3).map((ingredient: string, index: number) => (
+                                <Badge key={index} variant="secondary" className="text-xs">
+                                  {ingredient}
+                                </Badge>
+                              ))}
+                              {match.availableIngredients.length > 3 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{match.availableIngredients.length - 3}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        {match.missingIngredients.length > 0 && (
+                          <div className="mb-3">
+                            <p className="text-xs text-muted-foreground mb-1">Потрібно докупити:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {match.missingIngredients.slice(0, 2).map((ingredient: string, index: number) => (
+                                <Badge key={index} variant="outline" className="text-xs">
+                                  {ingredient}
+                                </Badge>
+                              ))}
+                              {match.missingIngredients.length > 2 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{match.missingIngredients.length - 2}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        <Button size="sm" variant="outline" className="w-full border-2 hover:bg-muted/50">
+                          Переглянути рецепт
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Utensils className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-muted-foreground mb-4">Додайте продукти до холодильника, щоб отримати пропозиції рецептів</p>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowAddModal(true)}
+                    className="border-2 hover:bg-muted/50"
+                  >
+                    Додати продукти
+                  </Button>
+                </div>
+              )}
+            </Card>
+          </div>
+        );
+
+      case "shopping":
+        return (
+          <div className="space-y-6">
+            <Card className="p-6 bg-card/30 backdrop-blur-sm border border-muted/30 shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">Список покупок</h3>
+                <div className="flex gap-2">
+                  <Badge variant="outline">
+                    {pendingShoppingItems.length} активних
+                  </Badge>
+                  <Badge variant="secondary">
+                    {completedShoppingItems.length} виконаних
+                  </Badge>
+                </div>
+              </div>
+
+              {shoppingList.length === 0 ? (
+                <div className="text-center py-8">
+                  <ShoppingCart className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-muted-foreground mb-4">Список покупок порожній</p>
+                  <p className="text-sm text-muted-foreground">
+                    Продукти будуть автоматично додаватися з холодильника та рецептів
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {shoppingList.map((item) => (
+                    <Card key={item.id} className="p-3 bg-card/50 backdrop-blur-sm border border-muted/30">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleShoppingListItem(item.id)}
+                          >
+                            {item.isCompleted ? (
+                              <CheckCircle className="w-4 h-4 text-green-500" />
+                            ) : (
+                              <Circle className="w-4 h-4 text-muted-foreground" />
+                            )}
+                          </Button>
+                          <div className="flex-1">
+                            <h4 className={`font-medium ${item.isCompleted ? "line-through text-muted-foreground" : ""}`}>
+                              {item.name}
+                            </h4>
+                            <div className="text-sm text-muted-foreground">
+                              <span>{item.category}</span>
+                              {item.quantity && (
+                                <span className="ml-2">
+                                  {item.quantity.amount} {item.quantity.unit}
+                                </span>
+                              )}
+                              <Badge variant="outline" className="ml-2 text-xs">
+                                {item.source === "manual" ? "Вручну" : 
+                                 item.source === "fridge_expired" ? "Прострочено" :
+                                 item.source === "recipe_missing" ? "З рецепту" : "Закінчується"}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeFromShoppingList(item.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </div>
+        );
+
+      case "analytics":
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card className="p-4 bg-card/30 backdrop-blur-sm border border-muted/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <Package className="w-5 h-5 text-primary" />
+                  <h4 className="font-semibold">Всього продуктів</h4>
+                </div>
+                <p className="text-2xl font-bold">{analytics.totalProducts}</p>
+              </Card>
+
+              <Card className="p-4 bg-card/30 backdrop-blur-sm border border-muted/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle className="w-5 h-5 text-destructive" />
+                  <h4 className="font-semibold">Прострочено</h4>
+                </div>
+                <p className="text-2xl font-bold text-destructive">{analytics.expiredProducts}</p>
+              </Card>
+
+              <Card className="p-4 bg-card/30 backdrop-blur-sm border border-muted/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock className="w-5 h-5 text-warning" />
+                  <h4 className="font-semibold">Скоро прострочиться</h4>
+                </div>
+                <p className="text-2xl font-bold text-warning">{analytics.expiringSoon}</p>
+              </Card>
+
+              <Card className="p-4 bg-card/30 backdrop-blur-sm border border-muted/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingUp className="w-5 h-5 text-success" />
+                  <h4 className="font-semibold">Відсоток відходів</h4>
+                </div>
+                <p className="text-2xl font-bold text-success">{analytics.wasteStats.wastePercentage}%</p>
+              </Card>
+            </div>
+
+            {analytics.nutritionBalance.totalCalories > 0 && (
+              <Card className="p-6 bg-card/30 backdrop-blur-sm border border-muted/30 shadow-lg">
+                <h3 className="text-lg font-semibold mb-4">Загальна поживна цінність</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-primary">{Math.round(analytics.nutritionBalance.totalCalories)}</p>
+                    <p className="text-sm text-muted-foreground">Ккал</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-blue-500">{Math.round(analytics.nutritionBalance.totalProtein)}г</p>
+                    <p className="text-sm text-muted-foreground">Білки</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-yellow-500">{Math.round(analytics.nutritionBalance.totalFat)}г</p>
+                    <p className="text-sm text-muted-foreground">Жири</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-green-500">{Math.round(analytics.nutritionBalance.totalCarbs)}г</p>
+                    <p className="text-sm text-muted-foreground">Вуглеводи</p>
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            {analytics.topProducts.length > 0 && (
+              <Card className="p-6 bg-card/30 backdrop-blur-sm border border-muted/30 shadow-lg">
+                <h3 className="text-lg font-semibold mb-4">Найчастіші продукти</h3>
+                <div className="space-y-2">
+                  {analytics.topProducts.map((product, index) => (
+                    <div key={index} className="flex items-center justify-between p-2 border rounded bg-card/50 backdrop-blur-sm">
+                      <div>
+                        <span className="font-medium">{product.name}</span>
+                        <Badge variant="outline" className="ml-2 text-xs">{product.category}</Badge>
+                      </div>
+                      <Badge variant="secondary">{product.frequency} разів</Badge>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen w-full bg-background">
+      <DashboardSidebar />
+      <div className="flex-1 min-w-0">
+        <MobileHeader />
+        <main className="p-4 pb-20 md:pb-8 md:p-8 max-w-6xl mx-auto w-full">
+          {/* Header */}
+          <FridgeHeaderBar
+            expiredCount={expiredProducts.length}
+            expiringCount={expiringProducts.length}
+            onAddProduct={() => setShowAddModal(true)}
+          />
+
+          {/* Tabs Navigation */}
+          <div className="mb-6">
+            <FridgeTabsNav
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+            />
+          </div>
+
+          {/* Tab Content */}
+          {getTabContent()}
+        </main>
+        <MobileBottomNav />
+      </div>
+      
+      {/* Add Product Modal */}
+      <AddProductModal
+        open={showAddModal}
+        onOpenChange={setShowAddModal}
+        onAddProduct={addProduct}
+        onSearchProducts={searchProducts}
+        searchResults={searchResults}
+        searchLoading={searchLoading}
+        onAddFromSearch={addProductFromSearch}
+      />
+      
+      {/* Recipe Details Modal */}
+      <RecipeDetails
+        recipe={selectedRecipe}
+        open={recipeDetailsOpen}
+        onOpenChange={setRecipeDetailsOpen}
+        isFavorite={false}
+        onToggleFavorite={() => {}}
+      />
+    </div>
+  );
+}
+
+
+/* Кінець файлу: src/pages/SmartFridge.tsx */
+

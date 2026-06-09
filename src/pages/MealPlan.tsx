@@ -11,6 +11,8 @@ import { AINutritionPlanner } from "@/components/AINutritionPlanner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { RecipeDetailsModal } from "@/components/RecipeDetailsModal";
+import { generateDetailedRecipe } from "@/lib/openai-ai";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -33,6 +35,7 @@ type MealPlanItem = {
   carbs: number;
   servings: number;
   date: string;
+  recipeDetails?: any;
 };
 
 type WeeklyPlan = {
@@ -49,25 +52,61 @@ export default function MealPlan() {
   const targetFat = user?.targets?.fats || 65;
   const targetCarbs = user?.targets?.carbs || 250;
 
-  const [weeklyPlan, setWeeklyPlan] = useState<WeeklyPlan>({});
+  const [weeklyPlan, setWeeklyPlan] = useState<WeeklyPlan>(() => {
+    try {
+      const saved = localStorage.getItem("omomo_meal_plan");
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (error) {
+      console.error("Error loading meal plan:", error);
+    }
+    return {};
+  });
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedMealType, setSelectedMealType] = useState<MealType>("breakfast");
+  const [recipeModalOpen, setRecipeModalOpen] = useState(false);
+  const [selectedRecipeDetails, setSelectedRecipeDetails] = useState<any>(null);
+  const [loadingRecipeDetails, setLoadingRecipeDetails] = useState(false);
   const [suggestedRecipes, setSuggestedRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"weekly" | "daily">("weekly");
 
   const KEY = "omomo_meal_plan";
 
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(KEY);
-      if (saved) {
-        setWeeklyPlan(JSON.parse(saved));
-      }
-    } catch (error) {
-      console.error("Error loading meal plan:", error);
+  // Функція обробки кліку на рецепт
+  const handleViewRecipe = async (meal: MealPlanItem) => {
+    if (meal.recipeDetails) {
+      setSelectedRecipeDetails(meal.recipeDetails);
+      setRecipeModalOpen(true);
+      return;
     }
-  }, []);
+    
+    try {
+      setLoadingRecipeDetails(true);
+      toast.info("Генеруємо детальний рецепт...");
+      
+      const aiRecipe = await generateDetailedRecipe(meal.name, meal.calories);
+      
+      meal.recipeDetails = {
+        title: aiRecipe.title || meal.name,
+        image: "https://images.unsplash.com/photo-1490818387583-1b5f2223d20d?auto=format&fit=crop&w=800&q=80",
+        readyInMinutes: aiRecipe.readyInMinutes || 20,
+        servings: aiRecipe.servings || 1,
+        nutrition: aiRecipe.nutrition || { calories: meal.calories, protein: meal.protein, fat: meal.fat, carbs: meal.carbs },
+        ingredients: aiRecipe.ingredients || [],
+        instructions: aiRecipe.instructions || []
+      };
+      
+      setWeeklyPlan(prev => ({...prev}));
+      setSelectedRecipeDetails(meal.recipeDetails);
+      setRecipeModalOpen(true);
+    } catch(e) {
+      toast.error("Не вдалося згенерувати рецепт");
+    } finally {
+      setLoadingRecipeDetails(false);
+    }
+  };
 
   useEffect(() => {
     try {
@@ -123,15 +162,13 @@ export default function MealPlan() {
   const generateMealPlan = async () => {
     setLoading(true);
     try {
-      // Розподіл калорій між прийомами їжі
       const calorieDistribution = {
-        breakfast: Math.round(targetCalories * 0.30), // 30% - сніданок
-        lunch: Math.round(targetCalories * 0.40),     // 40% - обід
-        dinner: Math.round(targetCalories * 0.25),    // 25% - вечеря
-        snack: Math.round(targetCalories * 0.05)      // 5% - перекус
+        breakfast: Math.round(targetCalories * 0.30),
+        lunch: Math.round(targetCalories * 0.40),
+        dinner: Math.round(targetCalories * 0.25),
+        snack: Math.round(targetCalories * 0.05)
       };
 
-      // Розподіл макронутрієнтів
       const macroDistribution = {
         breakfast: { protein: Math.round(targetProtein * 0.25), fat: Math.round(targetFat * 0.25), carbs: Math.round(targetCarbs * 0.30) },
         lunch: { protein: Math.round(targetProtein * 0.40), fat: Math.round(targetFat * 0.40), carbs: Math.round(targetCarbs * 0.40) },
@@ -139,10 +176,8 @@ export default function MealPlan() {
         snack: { protein: Math.round(targetProtein * 0.05), fat: Math.round(targetFat * 0.05), carbs: Math.round(targetCarbs * 0.05) }
       };
 
-      // Використовуємо AI для генерації рекомендацій різноманітних страв
-      const { chatWithAICoach } = await import("@/lib/gemini-ai");
+      const { chatWithAICoach } = await import("@/lib/openai-ai");
       
-      // Генеруємо різноманітні пошукові терміни через AI
       const aiPrompt = `Створи список різноманітних страв для плану харчування на тиждень (7 днів). 
 Кожен день має 4 прийоми: сніданок (~${calorieDistribution.breakfast} ккал), обід (~${calorieDistribution.lunch} ккал), вечеря (~${calorieDistribution.dinner} ккал), перекус (~${calorieDistribution.snack} ккал).
 Цілі: ${targetCalories} ккал/день, ${targetProtein}г білків, ${targetFat}г жирів, ${targetCarbs}г вуглеводів.
@@ -160,17 +195,14 @@ export default function MealPlan() {
       
       try {
         const aiResponse = await chatWithAICoach(aiPrompt);
-        // Парсимо відповідь AI - шукаємо JSON масив
         let jsonText = aiResponse;
         
-        // Видаляємо markdown блоки якщо є
         if (jsonText.includes('```json')) {
           jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
         } else if (jsonText.includes('```')) {
           jsonText = jsonText.replace(/```\n?/g, '').trim();
         }
         
-        // Шукаємо масив
         const jsonMatch = jsonText.match(/\[[\s\S]*\]/);
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]);
@@ -184,9 +216,8 @@ export default function MealPlan() {
       }
 
       const newPlan: WeeklyPlan = {};
-      const usedRecipeIds = new Set<number>(); // Для уникнення повторів
+      const usedRecipeIds = new Set<number>();
 
-      // Генеруємо план для кожного дня
       for (let dayIndex = 0; dayIndex < currentWeekDates.length; dayIndex++) {
         const date = currentWeekDates[dayIndex];
         newPlan[date] = {
@@ -196,20 +227,17 @@ export default function MealPlan() {
           snack: []
         };
 
-        // Для кожного прийому їжі
         for (const mealType of mealTypes) {
           const suggestion = mealSuggestions.find(
             m => m.day === dayIndex + 1 && m.mealType === mealType.key
           ) || { searchTerm: "healthy food", description: mealType.label };
 
           try {
-            // Шукаємо рецепти з урахуванням цілей
             const searchOptions: any = { 
               number: 10,
-              maxReadyTime: 60 // Максимум 60 хвилин
+              maxReadyTime: 60
             };
 
-            // Додаємо фільтри залежно від типу прийому їжі
             if (mealType.key === "breakfast") {
               searchOptions.dishType = "breakfast";
             } else if (mealType.key === "lunch") {
@@ -220,23 +248,21 @@ export default function MealPlan() {
 
             const result = await apiService.searchRecipes(suggestion.searchTerm, searchOptions);
             
-            // Фільтруємо рецепти за калоріями та уникаємо повторів
             const targetCaloriesForMeal = calorieDistribution[mealType.key];
             const targetMacros = macroDistribution[mealType.key];
             
             const suitableRecipes = result.recipes
               .filter(recipe => {
                 const recipeId = recipe.id;
-                if (usedRecipeIds.has(recipeId)) return false; // Уникаємо повторів
+                if (usedRecipeIds.has(recipeId)) return false;
                 
                 const recipeCalories = Math.round(
                   (recipe.nutrition?.nutrients.find((n: any) => n.name === "Calories")?.amount || 300) / recipe.servings
                 );
-                // Дозволяємо відхилення ±30% від цільових калорій
                 const caloriesDiff = Math.abs(recipeCalories - targetCaloriesForMeal);
                 return caloriesDiff <= targetCaloriesForMeal * 0.3;
               })
-              .slice(0, 1); // Беремо найкращий відповідний
+              .slice(0, 1);
 
             if (suitableRecipes.length > 0) {
               const recipe = suitableRecipes[0];
@@ -323,12 +349,10 @@ export default function MealPlan() {
   };
 
   const handleOpenSettings = () => {
-    // TODO: Implement settings modal
     toast.info("Налаштування плану харчування");
   };
 
   const handleViewRecipes = () => {
-    // Navigate to recipes page or open recipes modal
     toast.info("Перехід до рецептів");
   };
 
@@ -339,7 +363,6 @@ export default function MealPlan() {
 
   const handleAIPlanSave = (plan: any) => {
     toast.success(t("aiMealPlanSaved"));
-    // {t("aiMealPlanLogic")}
   };
 
   const handleDayClick = (date: string) => {
@@ -362,15 +385,12 @@ export default function MealPlan() {
     };
   };
 
-  // Computed values for header stats
   const currentDayTotals = getDayTotals(selectedDate);
   const currentDayProgress = getMealProgress(selectedDate);
   const completionPercentage = currentDayProgress.calories;
 
-  // Check if plan exists
   const hasPlan = Object.keys(weeklyPlan).length > 0;
 
-  // Weekly plan data for grid
   const weeklyPlanData = currentWeekDates.map(date => {
     const totals = getDayTotals(date);
     const progress = getMealProgress(date);
@@ -392,14 +412,12 @@ export default function MealPlan() {
       case "weekly":
         return (
           <div className="space-y-6">
-            {/* Summary Banner */}
             <MealPlanSummaryBanner
               hasPlan={hasPlan}
               completionPercentage={completionPercentage}
-              streakDays={3} // TODO: Calculate actual streak
+              streakDays={3}
             />
 
-            {/* Plan Zone */}
             {!hasPlan ? (
               <div className="space-y-6">
                 <AINutritionPlanner
@@ -422,7 +440,6 @@ export default function MealPlan() {
               />
             )}
 
-            {/* Recommendations */}
             <MealPlanRecommendations
               hasPlan={hasPlan}
               completionPercentage={completionPercentage}
@@ -435,7 +452,6 @@ export default function MealPlan() {
       case "daily":
         return (
           <div className="space-y-4 sm:space-y-6">
-            {/* Date Selector */}
             <Card className="p-3 sm:p-4 bg-card/30 backdrop-blur-sm border border-muted/30 shadow-lg">
               <div className="flex items-center gap-3">
                 <label className="text-sm font-medium whitespace-nowrap">Дата:</label>
@@ -448,7 +464,6 @@ export default function MealPlan() {
               </div>
             </Card>
 
-            {/* Meals by Type - Visual Cards */}
             <div className="space-y-4 sm:space-y-5">
               {mealTypes.map((mealType) => {
                 const IconComponent = mealType.icon;
@@ -469,7 +484,6 @@ export default function MealPlan() {
                       isActive ? "border-primary/50 ring-2 ring-primary/20" : "border-muted/30"
                     )}
                   >
-                    {/* Meal Header */}
                     <div 
                       className="flex items-center justify-between mb-3 sm:mb-4 cursor-pointer"
                       onClick={() => setSelectedMealType(mealType.key)}
@@ -506,13 +520,13 @@ export default function MealPlan() {
                       )}
                     </div>
 
-                    {/* Meals List */}
                     <div className="space-y-2 sm:space-y-3">
                       {meals.length > 0 ? (
                         meals.map((meal) => (
                           <Card 
                             key={meal.id} 
-                            className="p-2 sm:p-3 border border-muted/20 bg-card/50 backdrop-blur-sm hover:border-primary/30 transition-all"
+                            onClick={() => handleViewRecipe(meal)}
+                            className="p-2 sm:p-3 border border-muted/20 bg-card/50 backdrop-blur-sm hover:border-primary/30 transition-all cursor-pointer"
                           >
                             <div className="flex items-start justify-between gap-2 sm:gap-3">
                               <div className="flex-1 min-w-0">
@@ -541,7 +555,10 @@ export default function MealPlan() {
                               <Button 
                                 size="sm" 
                                 variant="ghost"
-                                onClick={() => removeMealFromPlan(meal.id)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeMealFromPlan(meal.id);
+                                }}
                                 className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
                               >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -560,7 +577,6 @@ export default function MealPlan() {
                       )}
                     </div>
 
-                    {/* Add Recipe Section - Only for active meal type */}
                     {isActive && (
                       <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-muted/30">
                         <div className="space-y-3">
@@ -641,7 +657,6 @@ export default function MealPlan() {
               })}
             </div>
 
-            {/* Daily Summary */}
             <Card className="p-4 sm:p-6 bg-card/30 backdrop-blur-sm border border-muted/30 shadow-lg">
               <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Підсумок дня</h3>
               {(() => {
@@ -703,7 +718,6 @@ export default function MealPlan() {
       <div className="flex-1 min-w-0">
         <MobileHeader />
         <main className="p-3 pb-24 md:pb-8 md:p-8 max-w-6xl mx-auto w-full space-y-4 md:space-y-6">
-          {/* Header Section */}
           <MealPlanHeaderStats
             completionPercentage={completionPercentage}
             targetCalories={targetCalories}
@@ -718,7 +732,6 @@ export default function MealPlan() {
             onOpenSettings={handleOpenSettings}
           />
 
-          {/* Tabs */}
           <div>
             <MealPlanTabs
               activeTab={activeTab}
@@ -726,15 +739,18 @@ export default function MealPlan() {
             />
           </div>
 
-          {/* Tab Content */}
           <div>
             {getTabContent()}
           </div>
         </main>
         <MobileBottomNav />
       </div>
+      
+      <RecipeDetailsModal 
+        isOpen={recipeModalOpen} 
+        onClose={() => setRecipeModalOpen(false)} 
+        recipe={selectedRecipeDetails} 
+      />
     </div>
   );
 }
-
-

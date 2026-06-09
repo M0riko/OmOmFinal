@@ -59,7 +59,9 @@ export function AddMealModal({
   };
 
   const handleAddRecipe = (recipe: Recipe) => {
-    onAddMeal(recipe);
+    if (onAddMeal) {
+      onAddMeal(recipe);
+    }
     onOpenChange(false);
     setSearchQuery("");
     setRecipes([]);

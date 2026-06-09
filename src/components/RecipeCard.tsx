@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 interface RecipeCardProps {
   recipe: Recipe;
   isFavorite: boolean;
-  onToggleFavorite: (recipeId: number) => void;
+  onToggleFavorite: (recipe: Recipe) => void;
   onOpenDetails: (recipe: Recipe) => void;
   translatedTitle?: string;
 }
@@ -45,7 +45,7 @@ export function RecipeCard({
           size="sm"
           variant="secondary"
           className="absolute top-3 right-3 h-9 w-9 p-0 bg-card/80 hover:bg-card shadow-lg backdrop-blur-sm"
-          onClick={() => onToggleFavorite(recipe.id)}
+          onClick={() => onToggleFavorite(recipe)}
         >
           <Heart className={cn(
             "w-4 h-4",

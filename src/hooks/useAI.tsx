@@ -7,7 +7,7 @@ import {
   chatWithAICoach, 
   generateMotivation,
   analyzeUserData
-} from '@/lib/gemini-ai';
+} from '@/lib/openai-ai';
 
 interface UserData {
   calories: number;
@@ -149,7 +149,6 @@ export function useAI() {
       return motivation;
     } catch (err) {
       setError('Помилка генерації мотивації');
-      console.error('Motivation Generation Error:', err);
       return null;
     } finally {
       setIsLoading(false);
@@ -166,7 +165,6 @@ export function useAI() {
       return analysis;
     } catch (err) {
       setError('Помилка аналізу даних');
-      console.error('User Data Analysis Error:', err);
       return null;
     } finally {
       setIsLoading(false);
