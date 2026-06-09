@@ -2,19 +2,27 @@
 import ModelClient, { isUnexpected } from "@azure-rest/ai-inference";
 import { AzureKeyCredential } from "@azure/core-auth";
 
-const GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN || '';
 const endpoint = "https://models.github.ai/inference";
 const MODEL_NAME = "Llama-3.2-11B-Vision-Instruct";
 
-const client = ModelClient(
-  endpoint,
-  new AzureKeyCredential(GITHUB_TOKEN || "dummy_key_to_prevent_crash"),
-);
+function getGithubToken() {
+  return import.meta.env.VITE_GITHUB_TOKEN || '';
+}
+
+function getClient() {
+  return ModelClient(
+    endpoint,
+    new AzureKeyCredential(getGithubToken() || "dummy_key_to_prevent_crash")
+  );
+}
 
 async function generateAIContent(prompt: string, jsonMode: boolean = false): Promise<string> {
-  if (!GITHUB_TOKEN) {
+  const token = getGithubToken();
+  if (!token) {
     throw new Error('Ключ API не знайдено. Будь ласка, налаштуйте VITE_GITHUB_TOKEN у .env.');
   }
+
+  const client = getClient();
 
   const response = await client.path("/chat/completions").post({
     body: {
@@ -127,7 +135,8 @@ interface AIInsight {
 
 // Функція для отримання щоденної поради AI
 export async function getDailyInsight(userData: UserData): Promise<AIInsight> {
-  if (!GITHUB_TOKEN) {
+  const token = getGithubToken();
+  if (!token) {
     return {
       type: 'tip',
       title: 'Підказка',
@@ -180,7 +189,8 @@ export async function getDailyInsight(userData: UserData): Promise<AIInsight> {
 
 // Функція для генерації плану тренувань
 export async function generateWorkoutPlan(goals: string[], userLevel: string = 'початківець'): Promise<WorkoutPlan> {
-  if (!GITHUB_TOKEN) {
+  const token = getGithubToken();
+  if (!token) {
     return {
       name: "Базове тренування",
       duration: 30,
@@ -248,7 +258,8 @@ export async function generateDetailedRecipe(
   targetCalories: number,
   dietType: string = "всі"
 ): Promise<any> {
-  if (!GITHUB_TOKEN) {
+  const token = getGithubToken();
+  if (!token) {
     throw new Error("No API token");
   }
   
@@ -284,6 +295,7 @@ export async function generateDetailedRecipe(
   `;
 
   try {
+    const client = getClient();
     const response = await client.path("/chat/completions").post({
       body: {
         messages: [
@@ -321,7 +333,8 @@ export async function generateDetailedRecipe(
 
 // Функція для генерації плану харчування
 export async function generateMealPlan(goals: string[], targetCalories: number = 2000): Promise<MealPlan> {
-  if (!GITHUB_TOKEN) {
+  const token = getGithubToken();
+  if (!token) {
     return {
       name: "Базовий план харчування",
       meals: [],
@@ -383,7 +396,8 @@ export async function generateMealPlan(goals: string[], targetCalories: number =
 
 // Функція для аналізу прогресу
 export async function analyzeProgress(stats: any): Promise<string> {
-  if (!GITHUB_TOKEN) {
+  const token = getGithubToken();
+  if (!token) {
     return "Оновіть ключ API для отримання детального аналізу вашого прогресу від AI.";
   }
   try {
@@ -431,7 +445,8 @@ export async function analyzeProgress(stats: any): Promise<string> {
 
 // Функція для чату з AI коучем
 export async function chatWithAICoach(message: string, context?: any): Promise<string> {
-  if (!GITHUB_TOKEN) {
+  const token = getGithubToken();
+  if (!token) {
     return "AI-Коуч наразі недоступний. Будь ласка, задайте ключ VITE_GITHUB_TOKEN у конфігурації.";
   }
   try {
@@ -568,7 +583,8 @@ export async function chatWithAICoach(message: string, context?: any): Promise<s
 
 // Функція для глибокого аналізу даних користувача
 export async function analyzeUserData(userData: any): Promise<string> {
-  if (!GITHUB_TOKEN) {
+  const token = getGithubToken();
+  if (!token) {
     return "Додайте ключ VITE_GITHUB_TOKEN, щоб отримати персоналізований аналіз ваших даних.";
   }
   try {
@@ -629,7 +645,8 @@ export async function analyzeUserData(userData: any): Promise<string> {
 
 // Функція для генерації мотиваційних повідомлень
 export async function generateMotivation(userProgress: any): Promise<string> {
-  if (!GITHUB_TOKEN) {
+  const token = getGithubToken();
+  if (!token) {
     return "Продовжуйте в тому ж дусі! Ви на правильному шляху.";
   }
   try {
