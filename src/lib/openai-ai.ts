@@ -8,7 +8,7 @@ const MODEL_NAME = "Llama-3.2-11B-Vision-Instruct";
 
 const client = ModelClient(
   endpoint,
-  new AzureKeyCredential(GITHUB_TOKEN),
+  new AzureKeyCredential(GITHUB_TOKEN || "dummy_key_to_prevent_crash"),
 );
 
 async function generateAIContent(prompt: string, jsonMode: boolean = false): Promise<string> {
