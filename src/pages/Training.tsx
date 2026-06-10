@@ -15,6 +15,7 @@ import { AIWorkoutGenerator } from "@/components/AIWorkoutGenerator";
 import { LiveWorkoutMode } from "@/components/LiveWorkoutMode";
 import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Activity, Calendar, Trophy, Target } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useWorkouts } from "@/hooks/useWorkouts";
