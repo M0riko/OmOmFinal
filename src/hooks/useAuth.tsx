@@ -56,16 +56,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const res = await fetch(`${API_BASE}/api/user/me`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
-          
+
           if (res.ok) {
             const data = await res.json();
-            
-            // Re-merge with local targets if they exist
+
             const raw = localStorage.getItem(STORAGE_KEY);
-            let localTargets = { calories: 2000, protein: 120, fats: 65, carbs: 250 };
+            let localTargets = null;
             if (raw) {
               const parsed = JSON.parse(raw);
               if (parsed.targets) localTargets = parsed.targets;
+            }
+
+            if (data.user.calculatedCalories && (!localTargets || localTargets.calories === 2000)) {
+              localTargets = {
+                calories: data.user.calculatedCalories,
+                protein: Math.round(data.user.calculatedCalories * 0.25 / 4),
+                fats: Math.round(data.user.calculatedCalories * 0.25 / 9),
+                carbs: Math.round(data.user.calculatedCalories * 0.5 / 4)
+              };
+            } else if (!localTargets) {
+              localTargets = { calories: 2000, protein: 120, fats: 65, carbs: 250 };
             }
 
             setUser({
@@ -97,7 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false);
       }
     };
-    
+
     validateSession();
   }, []);
 
@@ -118,17 +128,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Login failed');
-    
+
     localStorage.setItem('omomo_auth_token', data.token);
-    
+
     // Attempt to preserve targets if switching users or re-logging
     const raw = localStorage.getItem(STORAGE_KEY);
-    let localTargets = { calories: 2000, protein: 120, fats: 65, carbs: 250 };
+    let localTargets = null;
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed.email === data.user.email && parsed.targets) {
         localTargets = parsed.targets;
       }
+    }
+
+    if (data.user.calculatedCalories && (!localTargets || localTargets.calories === 2000)) {
+      localTargets = {
+        calories: data.user.calculatedCalories,
+        protein: Math.round(data.user.calculatedCalories * 0.25 / 4),
+        fats: Math.round(data.user.calculatedCalories * 0.25 / 9),
+        carbs: Math.round(data.user.calculatedCalories * 0.5 / 4)
+      };
+    } else if (!localTargets) {
+      localTargets = { calories: 2000, protein: 120, fats: 65, carbs: 250 };
     }
 
     setUser({
@@ -151,9 +172,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const res = await fetch(`${API_BASE}/api/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        username: name || email.split("@")[0], 
-        email, 
+      body: JSON.stringify({
+        username: name || email.split("@")[0],
+        email,
         password: password || 'password',
         age: 25,
         weight: 70,
@@ -162,9 +183,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Registration failed');
-    
+
     localStorage.setItem('omomo_auth_token', data.token);
-    
+
     setUser({
       id: data.user.id,
       name: data.user.username,
@@ -177,13 +198,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       onboardingCompleted: data.user.onboardingCompleted || false,
       targetWeight: data.user.targetWeight,
       calculatedCalories: data.user.calculatedCalories,
-      targets: { calories: 2000, protein: 120, fats: 65, carbs: 250 }
+      targets: data.user.calculatedCalories ? {
+        calories: data.user.calculatedCalories,
+        protein: Math.round(data.user.calculatedCalories * 0.25 / 4),
+        fats: Math.round(data.user.calculatedCalories * 0.25 / 9),
+        carbs: Math.round(data.user.calculatedCalories * 0.5 / 4)
+      } : { calories: 2000, protein: 120, fats: 65, carbs: 250 }
     });
   }, []);
 
   const completeRegistration = useCallback(async (email: string, userData: any) => {
     const { name, calculatedCalories, targetWeight, weight, height, age, goals } = userData;
-    
+
     // Оновлюємо бекенд
     try {
       const token = localStorage.getItem('omomo_auth_token');
@@ -208,19 +234,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       console.error("Помилка збереження онбордінгу на бекенд:", e);
     }
-    
+
     // This updates the local context properties
     setUser(prev => {
       if (!prev) return prev;
+
+      const newCal = calculatedCalories || prev.calculatedCalories || 2000;
+
       return {
         ...prev,
         name: name || prev.name,
         onboardingCompleted: true,
-        targets: { 
-          calories: calculatedCalories || 2000, 
-          protein: Math.round((calculatedCalories || 2000) * 0.25 / 4), 
-          fats: Math.round((calculatedCalories || 2000) * 0.25 / 9), 
-          carbs: Math.round((calculatedCalories || 2000) * 0.5 / 4) 
+        calculatedCalories: calculatedCalories || prev.calculatedCalories,
+        targets: {
+          calories: newCal,
+          protein: Math.round(newCal * 0.25 / 4),
+          fats: Math.round(newCal * 0.25 / 9),
+          carbs: Math.round(newCal * 0.5 / 4)
         }
       };
     });
@@ -229,14 +259,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loginWithGoogle = useCallback(async () => {
     try {
       const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-      
+
       if (!clientId) {
         throw new Error("Google OAuth не настроен. Создайте файл .env с VITE_GOOGLE_CLIENT_ID");
       }
 
       const redirectUri = `${window.location.origin}/auth/google/callback`;
       const scope = "openid email profile";
-      const responseType = "code";
+      const responseType = "token"; // Use implicit flow to get access_token directly
       const state = crypto.randomUUID();
 
       sessionStorage.setItem("google_oauth_state", state);
@@ -260,7 +290,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const userId = user?.id;
     localStorage.removeItem('omomo_auth_token');
     localStorage.removeItem(STORAGE_KEY);
-    
+
     // Clear all user-specific fitness data caches
     if (userId) {
       const keysToRemove: string[] = [];
@@ -272,13 +302,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       keysToRemove.forEach(k => localStorage.removeItem(k));
     }
-    
+
     // Also clear shared onboarding data
     localStorage.removeItem('omom_profile_extra');
     localStorage.removeItem('omom_google_user_data');
     localStorage.removeItem('omomo_user_settings');
     sessionStorage.clear();
-    
+
     setUser(null);
   }, [user?.id]);
 
@@ -287,9 +317,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!u) {
         return {
           id: updates.id || crypto.randomUUID(),
-          name: updates.name || "Пользователь",
+          name: updates.name || (updates as any).username || "Пользователь",
           email: updates.email || "",
           avatarUrl: updates.avatarUrl,
+          age: updates.age,
+          weight: updates.weight,
+          height: updates.height,
+          role: updates.role,
+          isPremium: updates.isPremium,
+          onboardingCompleted: updates.onboardingCompleted || false,
+          calculatedCalories: updates.calculatedCalories,
+          targetWeight: updates.targetWeight,
           targets: updates.targets || { calories: 2000, protein: 120, fats: 65, carbs: 250 },
         };
       }
@@ -338,15 +376,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ 
-      user, 
-      isAuthenticated: !!user, 
+    () => ({
+      user,
+      isAuthenticated: !!user,
       isLoading,
-      login, 
-      register, 
-      completeRegistration, 
-      loginWithGoogle, 
-      logout, 
+      login,
+      register,
+      completeRegistration,
+      loginWithGoogle,
+      logout,
       updateUser,
       activatePremium,
       toggleDevRole

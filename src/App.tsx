@@ -22,6 +22,9 @@ import Articles from "./pages/Articles";
 import AICoach from "./pages/AICoach";
 import Settings from "./pages/Settings";
 import GoogleCallback from "./pages/GoogleCallback";
+import SpotifyCallback from "./pages/SpotifyCallback";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
 import { useAuth } from "./hooks/useAuth";
 import Trainers from "./pages/Trainers";
 import Music from "./pages/Music";
@@ -74,6 +77,9 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/auth/google/callback" element={<GoogleCallback />} />
+            <Route path="/spotify-callback" element={<SpotifyCallback />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/privacy" element={<Privacy />} />
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/recipes" element={<Recipes />} />

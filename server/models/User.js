@@ -26,6 +26,11 @@ const userSchema = new mongoose.Schema({
       temperature: { type: String, default: 'celsius' }
     }
   },
+  spotify: {
+    accessToken: { type: String },
+    refreshToken: { type: String },
+    expiresAt: { type: Date }
+  },
   createdAt: { type: Date, default: Date.now },
   isEmailVerified: { type: Boolean, default: false },
   verificationToken: { type: String },

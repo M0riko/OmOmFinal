@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
 import { useI18n } from "@/hooks/useI18n";
+import { useNotifications } from "@/hooks/useNotifications";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { Star, Calendar, MessageSquare, Clock, Search, Sparkles, Check, X, Send, User, ChevronRight, Lock } from "lucide-react";
@@ -130,6 +131,9 @@ export default function TrainersPage() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isTrainerTyping, setIsTrainerTyping] = useState(false);
 
+  const { notify } = useNotifications();
+  const prevChatsLength = useRef(0);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollingInterval = useRef<any>(null);
 
@@ -160,7 +164,21 @@ export default function TrainersPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setChatMessages(data.chats || []);
+        const newChats = data.chats || [];
+        
+        // Notify if new message from trainer
+        if (newChats.length > prevChatsLength.current) {
+          const newMessages = newChats.slice(prevChatsLength.current);
+          const latestTrainerMsg = newMessages.filter((m: any) => m.sender === 'trainer').pop();
+          if (latestTrainerMsg && document.hidden) {
+            notify(`Нове повідомлення від ${activeChatTrainer?.name || 'Тренера'}`, { body: latestTrainerMsg.message });
+          } else if (latestTrainerMsg) {
+             notify(`Нове повідомлення`, { body: latestTrainerMsg.message });
+          }
+        }
+        
+        setChatMessages(newChats);
+        prevChatsLength.current = newChats.length;
       }
     } catch (e) {
       console.error("Failed to fetch chats:", e);

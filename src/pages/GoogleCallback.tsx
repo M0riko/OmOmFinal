@@ -13,11 +13,11 @@ export default function GoogleCallback() {
   useEffect(() => {
     const handleGoogleCallback = async () => {
       try {
-        const code = searchParams.get("code");
-        const state = searchParams.get("state");
-        const error = searchParams.get("error");
-
-        console.log("Google Callback - URL params:", { code: code ? "present" : "missing", state: state ? "present" : "missing", error });
+        // With response_type=token, the access_token is returned in the URL fragment (hash)
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const accessToken = hashParams.get("access_token");
+        const state = hashParams.get("state") || searchParams.get("state");
+        const error = hashParams.get("error") || searchParams.get("error");
 
         if (error) {
           console.error("Google OAuth error:", error);
@@ -25,8 +25,8 @@ export default function GoogleCallback() {
           return;
         }
 
-        if (!code || !state) {
-          console.error("Missing required parameters:", { code: !!code, state: !!state });
+        if (!accessToken || !state) {
+          console.error("Missing required parameters:", { accessToken: !!accessToken, state: !!state });
           setError("Відсутні необхідні параметри авторизації");
           return;
         }
@@ -40,39 +40,6 @@ export default function GoogleCallback() {
 
         // Очищаем state
         sessionStorage.removeItem("google_oauth_state");
-
-        // Получаем реальные данные пользователя от Google
-        console.log("Google Callback - Getting real user data from Google");
-        
-        // Обмениваем authorization code на access token
-        const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-        const clientSecret = import.meta.env.VITE_GOOGLE_CLIENT_SECRET;
-        const redirectUri = `${window.location.origin}/auth/google/callback`;
-
-        const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: new URLSearchParams({
-            client_id: clientId,
-            client_secret: clientSecret,
-            code: code,
-            grant_type: 'authorization_code',
-            redirect_uri: redirectUri,
-          }),
-        });
-
-        if (!tokenResponse.ok) {
-          const errorText = await tokenResponse.text();
-          console.error('Token exchange failed:', errorText);
-          throw new Error('Не удалось получить access token');
-        }
-
-        const tokenData = await tokenResponse.json();
-        const accessToken = tokenData.access_token;
-
-        console.log("Google Callback - Access token received");
 
         // Получаем данные пользователя от Google
         const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
@@ -88,7 +55,6 @@ export default function GoogleCallback() {
         }
 
         const userData = await userResponse.json();
-        console.log("Google Callback - Real user data received:", userData);
 
         // Send to backend
         const API_BASE = import.meta.env.PROD
@@ -115,13 +81,14 @@ export default function GoogleCallback() {
         localStorage.setItem('omomo_auth_token', backendData.token);
 
         // Обновляем пользователя с данными от сервера
-        updateUser(backendData.user);
+        updateUser({
+          ...backendData.user,
+          name: backendData.user.username
+        });
 
         if (backendData.isNewUser || !backendData.user.onboardingCompleted) {
-          console.log("Google Callback - User needs onboarding");
           navigate("/auth");
         } else {
-          console.log("Google Callback - Existing user, updating profile");
           navigate("/");
         }
       } catch (err) {

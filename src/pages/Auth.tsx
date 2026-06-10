@@ -6,8 +6,8 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { useI18n } from "@/hooks/useI18n";
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Check, Apple, Utensils, Target, Sparkles, Shield, Lock } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { Eye, EyeOff, Check, Utensils, Target, Sparkles, Shield, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { PasswordStrengthIndicator } from "@/components/PasswordStrengthIndicator";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
@@ -37,13 +37,7 @@ export default function AuthPage() {
         return !!user.onboardingCompleted;
       };
 
-      console.log("Auth: User authenticated, checking onboarding status");
-      console.log("Auth: User data:", user);
-      console.log("Auth: Onboarding complete:", isOnboardingComplete());
-      console.log("Auth: Show onboarding state:", showOnboarding);
-
       if (!isOnboardingComplete()) {
-        console.log("Auth: Showing onboarding for authenticated user");
         
         // Проверяем, есть ли данные Google для онбординга
         const googleUserData = localStorage.getItem("omom_google_user_data");
@@ -55,7 +49,6 @@ export default function AuthPage() {
               name: googleData.name,
               avatarUrl: googleData.avatarUrl
             });
-            console.log("Auth: Using Google user data for onboarding");
           } catch (error) {
             console.error("Auth: Error parsing Google user data:", error);
             setPendingUserData({ email: user.email });
@@ -170,10 +163,7 @@ export default function AuthPage() {
     }
   }
 
-  async function handleAppleLogin() {
-    // В реальном приложении здесь будет интеграция с Apple Sign In
-    toast.info("Apple Sign In буде доступний найближчим часом");
-  }
+
 
   async function handleOnboardingComplete(onboardingData: any) {
     try {
@@ -277,17 +267,14 @@ export default function AuthPage() {
         });
       }
 
-      console.log("Auth: Onboarding completed, redirecting to home");
       setShowOnboarding(false);
       toast.success("Профіль налаштовано! Ласкаво просимо в OmOm!");
       
       // Принудительно перенаправляем на главную страницу
       try { 
         sessionStorage.setItem("omom_post_login", "/"); 
-        console.log("Auth: Set post-login redirect to /");
         // Небольшая задержка для завершения обновления состояния
         setTimeout(() => {
-          console.log("Auth: Redirecting to home page");
           navigate("/", { replace: true });
         }, 100);
       } catch {}
@@ -708,16 +695,6 @@ export default function AuthPage() {
                       </svg>
                       {isLoading ? "Завантаження..." : "Зареєструватися через Google"}
                     </Button>
-
-                    <Button
-                      disabled={isLoading}
-                      variant="outline"
-                      className="w-full gap-3 h-12 text-base font-medium hover:bg-muted/50 transition-all duration-200 border-2 hover:border-primary/20"
-                      onClick={handleAppleLogin}
-                    >
-                      <Apple className="w-5 h-5" />
-                      {isLoading ? "Завантаження..." : "Зареєструватися через Apple"}
-                    </Button>
                   </div>
                   
                   <div className="relative">
@@ -830,13 +807,13 @@ export default function AuthPage() {
                   <div className="text-center space-y-2">
                     <p className="text-xs text-muted-foreground">
                       Реєструючись, ви погоджуєтесь з нашими{" "}
-                      <a href="#" className="text-primary hover:text-primary/80 underline font-medium transition-colors">
+                      <Link to="/terms" className="text-primary hover:text-primary/80 underline font-medium transition-colors">
                         Умовами використання
-                      </a>{" "}
+                      </Link>{" "}
                       та{" "}
-                      <a href="#" className="text-primary hover:text-primary/80 underline font-medium transition-colors">
+                      <Link to="/privacy" className="text-primary hover:text-primary/80 underline font-medium transition-colors">
                         Політикою конфіденційності
-                      </a>
+                      </Link>
                     </p>
                     <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                       <Lock className="w-3 h-3" />

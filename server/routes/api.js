@@ -48,7 +48,8 @@ const isValidEmail = (email) => {
 
 // POST /api/register
 router.post('/register', async (req, res) => {
-  const { username, email, password, age, weight, height } = req.body;
+  let { username, email, password, age, weight, height } = req.body;
+  if (email) email = email.toLowerCase().trim();
   
   if (!email || !password || !username) {
     return res.status(400).json({ error: 'Please provide username, email and password' });
@@ -112,7 +113,8 @@ router.post('/register', async (req, res) => {
 
 // POST /api/login
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
+  let { email, password } = req.body;
+  if (email) email = email.toLowerCase().trim();
   if (!email || !password) {
     return res.status(400).json({ error: 'Please provide email and password' });
   }
@@ -126,6 +128,12 @@ router.post('/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ error: 'Invalid credentials' });
+    }
+
+    // Automatically mark onboarding as completed for existing users who are logging in
+    if (!user.onboardingCompleted) {
+      user.onboardingCompleted = true;
+      await user.save();
     }
 
     const token = jwt.sign({ id: user._id, email }, JWT_SECRET, { expiresIn: '7d' });
@@ -156,7 +164,8 @@ router.post('/login', async (req, res) => {
 // POST /api/auth/google
 router.post('/auth/google', async (req, res) => {
   try {
-    const { email, name, googleId } = req.body;
+    let { email, name, googleId } = req.body;
+    if (email) email = email.toLowerCase().trim();
     if (!email) return res.status(400).json({ error: 'Email is required' });
 
     let user = await User.findOne({ email });
@@ -175,6 +184,12 @@ router.post('/auth/google', async (req, res) => {
         onboardingCompleted: false
       });
       isNewUser = true;
+    } else {
+      // Existing user: mark onboarding as completed if it wasn't already
+      if (!user.onboardingCompleted) {
+        user.onboardingCompleted = true;
+        await user.save();
+      }
     }
 
     const token = jwt.sign({ id: user._id, email }, JWT_SECRET, { expiresIn: '7d' });
@@ -241,6 +256,7 @@ router.post('/auth/forgot-password', async (req, res) => {
     user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
     await user.save();
 
+    const resetUrl = `http://localhost:5173/reset-password?token=${resetToken}`;
     await sendPasswordResetEmail(user.email, resetToken);
 
     res.json({ message: 'If an account exists, a reset link has been sent.' });
@@ -343,12 +359,13 @@ router.get('/user/me', authMiddleware, async (req, res) => {
 // PATCH /api/user/me - update user profile
 router.patch('/user/me', authMiddleware, async (req, res) => {
   try {
-    const { username, age, weight, height } = req.body;
+    const { username, age, weight, height, targetWeight } = req.body;
     const updates = {};
     if (username !== undefined) updates.username = username;
     if (age !== undefined) updates.age = age;
     if (weight !== undefined) updates.weight = weight;
     if (height !== undefined) updates.height = height;
+    if (targetWeight !== undefined) updates.targetWeight = targetWeight;
 
     const user = await User.findByIdAndUpdate(
       req.user.id,

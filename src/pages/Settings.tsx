@@ -2,6 +2,8 @@ import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { MobileHeader } from "@/components/MobileHeader";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { useAuth } from "@/hooks/useAuth";
+import { useWeight } from "@/hooks/useWeight";
+import { useNotifications } from "@/hooks/useNotifications";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -33,6 +35,8 @@ import { toast } from "sonner";
 
 export default function Settings() {
   const { user, updateUser, logout } = useAuth();
+  const { addWeight } = useWeight();
+  const { permission, requestPermission } = useNotifications();
   const navigate = useNavigate();
   const { t, locale, setLocale } = useI18n();
   const [isEditing, setIsEditing] = useState(false);
@@ -82,11 +86,43 @@ export default function Settings() {
 
   const handleSave = async () => {
     try {
-      await updateUser(formData);
+      const parsedData = {
+        ...formData,
+        age: parseInt(formData.age as any) || undefined,
+        weight: parseFloat(formData.weight as any) || undefined,
+        height: parseFloat(formData.height as any) || undefined,
+        targetWeight: parseFloat(formData.targetWeight as any) || undefined,
+      };
+
+      const token = localStorage.getItem('omomo_auth_token');
+      if (token) {
+        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/user/me`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(parsedData)
+        });
+        
+        if (!res.ok) {
+          throw new Error('Помилка сервера');
+        }
+        
+        // Update local context
+        await updateUser(parsedData);
+        
+        // If weight changed, add a log to weight tracker so it overrides trackedWeight
+        if (parsedData.weight && parsedData.weight !== user?.weight) {
+          addWeight(parsedData.weight, "Updated from Settings");
+        }
+      }
+      
       setIsEditing(false);
       toast.success("Налаштування збережено!");
     } catch (error) {
       toast.error("Помилка збереження налаштувань");
+      console.error(error);
     }
   };
 
@@ -361,6 +397,24 @@ export default function Settings() {
                     onCheckedChange={(checked) => handleNestedInputChange('notifications', 'achievements', checked)}
                   />
                 </div>
+                
+                {/* System notifications row */}
+                <div className="flex items-center justify-between p-3 bg-muted/40 rounded-xl mt-4 border border-border/50">
+                  <div>
+                    <p className="font-semibold text-primary">Системні сповіщення (Push)</p>
+                    <p className="text-xs text-muted-foreground">Отримувати на телефон/ПК у фоні</p>
+                  </div>
+                  <Button 
+                    variant={permission === 'granted' ? "outline" : "default"} 
+                    onClick={requestPermission}
+                    disabled={permission === 'granted'}
+                    size="sm"
+                    className="rounded-xl h-8 text-xs px-3"
+                  >
+                    {permission === 'granted' ? 'Увімкнено' : 'Дозволити'}
+                  </Button>
+                </div>
+
               </div>
             </Card>
           </motion.div>

@@ -7,6 +7,42 @@ const TrainerChat = require('../models/TrainerChat');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'omom-super-secret-key';
 
+const TRAINERS_PROFILES = {
+  alex: { name: "Олександр Коваленко", specialty: "Набір маси та сила", style: "мотивуючий, вимогливий, використовує сленг бодібілдерів" },
+  elena: { name: "Олена Ростова", specialty: "Йога, стретчинг та кор", style: "спокійна, духовна, фокусується на диханні та гармонії" },
+  dmitry: { name: "Дмитро Кравченко", specialty: "Схуднення та кардіо HIIT", style: "дуже енергійний, швидкий, змушує виходити із зони комфорту" },
+  nikita: { name: "Нікіта Глухих", specialty: "Функціональний тренінг та реабілітація", style: "науковий, уважний до техніки та здоров'я суглобів" }
+};
+
+async function generateTrainerReply(trainerId, userMessage) {
+  try {
+    const trainer = TRAINERS_PROFILES[trainerId] || { name: "Тренер", specialty: "Загальний фітнес", style: "допомагає та підтримує" };
+    
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.VITE_GROQ_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          { role: "system", content: `Ти фітнес-тренер на ім'я ${trainer.name}. Твоя спеціалізація: ${trainer.specialty}. Твій стиль спілкування: ${trainer.style}. Ти спілкуєшся з клієнтом у месенджері. Відповідай дуже коротко (1-3 речення), як у чаті. Якщо користувач задає питання, дай конкретну пораду. Якщо вітається - привітайся. Завжди відповідай українською мовою.` },
+          { role: "user", content: userMessage }
+        ]
+      })
+    });
+    
+    if (!response.ok) return "Вибачте, зараз я на персональному тренуванні. Відповім трохи згодом!";
+    
+    const data = await response.json();
+    return data.choices[0].message.content;
+  } catch (err) {
+    console.error("Groq error:", err);
+    return "Вибачте, маю проблеми зі зв'язком. Напишіть трохи пізніше!";
+  }
+}
+
 const authMiddleware = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'No token provided' });
@@ -103,6 +139,20 @@ router.post('/chats', async (req, res) => {
     
     await chat.save();
     res.json({ chat });
+
+    // Generate trainer reply asynchronously
+    if (!sender || sender === 'user') {
+      generateTrainerReply(trainerId, message).then(async (reply) => {
+         const trainerChat = new TrainerChat({
+           userId: req.user.id,
+           trainerId,
+           message: reply,
+           sender: 'trainer'
+         });
+         await trainerChat.save();
+      }).catch(console.error);
+    }
+
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

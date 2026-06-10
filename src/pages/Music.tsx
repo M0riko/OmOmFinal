@@ -49,8 +49,50 @@ export default function MusicPage() {
   // Spotify integration
   const [isSpotifyConnected, setIsSpotifyConnected] = useState(false);
   const [spotifyUser, setSpotifyUser] = useState<any>(null);
+  const [spotifyTopTracks, setSpotifyTopTracks] = useState<any[]>([]);
   const [selectedPlaylist, setSelectedPlaylist] = useState(SPOTIFY_PLAYLISTS[0].id);
   const [isConnectingSpotify, setIsConnectingSpotify] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const checkSpotifyStatus = async () => {
+      try {
+        const token = localStorage.getItem("omomo_auth_token");
+        const res = await fetch(`${API_BASE}/api/spotify/status`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setIsSpotifyConnected(data.connected);
+          if (data.connected) {
+            fetchTopTracks();
+            setSpotifyUser({
+              display_name: user?.name || "Spotify User",
+              avatar: "S"
+            });
+          }
+        }
+      } catch (e) {
+        console.error("Error checking Spotify status", e);
+      }
+    };
+    checkSpotifyStatus();
+  }, [isAuthenticated]);
+
+  const fetchTopTracks = async () => {
+    try {
+      const token = localStorage.getItem("omomo_auth_token");
+      const res = await fetch(`${API_BASE}/api/spotify/top-tracks`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSpotifyTopTracks(data.tracks || []);
+      }
+    } catch (e) {
+      console.error("Error fetching top tracks", e);
+    }
+  };
 
   // Custom tracks state
   const [customTracks, setCustomTracks] = useState<CustomTrack[]>([]);
@@ -252,19 +294,32 @@ export default function MusicPage() {
     }
   };
 
-  // Mock Spotify Connect Dialog
-  const handleConnectSpotify = () => {
+  // Spotify Connect
+  const handleConnectSpotify = async () => {
+    if (!isAuthenticated) {
+      toast.error(locale === "uk" ? "Будь ласка, увійдіть в акаунт" : "Please log in first");
+      return;
+    }
     setIsConnectingSpotify(true);
-    setTimeout(() => {
-      setIsSpotifyConnected(true);
-      setSpotifyUser({
-        display_name: user?.name || "OmOm Fitness User",
-        avatar: user?.avatarUrl || "S",
-        followers: 124
+    try {
+      const token = localStorage.getItem("omomo_auth_token");
+      const res = await fetch(`${API_BASE}/api/spotify/auth-url`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.url) {
+          window.location.href = data.url;
+        }
+      } else {
+        toast.error(locale === "uk" ? "Помилка сервера. Впевніться, що ключі додано." : "Server error. Ensure API keys are set.");
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error(locale === "uk" ? "Помилка підключення" : "Connection error");
+    } finally {
       setIsConnectingSpotify(false);
-      toast.success(locale === "uk" ? "Spotify успішно підключено!" : "Spotify Connected Successfully!");
-    }, 1500);
+    }
   };
 
   // Add Custom Track
@@ -516,6 +571,32 @@ export default function MusicPage() {
                         })}
                       </div>
                     </Card>
+
+                    {/* Top Tracks display */}
+                    {spotifyTopTracks.length > 0 && (
+                      <Card className="p-4 bg-muted/20 border-border/40 rounded-2xl mt-4">
+                        <div className="space-y-2.5">
+                          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                            {locale === "uk" ? "Ваші Топ Треки" : "Your Top Tracks"}
+                          </p>
+                          {spotifyTopTracks.map((track) => (
+                            <div key={track.id} className="w-full text-left p-3 rounded-xl border bg-card border-border/50 text-foreground hover:bg-muted/40 transition-all flex items-start gap-2.5">
+                               {track.album?.images?.[0]?.url ? (
+                                 <img src={track.album.images[0].url} alt="album" className="w-10 h-10 rounded-md" />
+                               ) : (
+                                 <Music className="w-10 h-10 p-2 bg-muted rounded-md text-muted-foreground" />
+                               )}
+                               <div className="min-w-0 flex-1">
+                                 <p className="text-sm font-bold leading-tight truncate">{track.name}</p>
+                                 <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">
+                                   {track.artists?.map((a: any) => a.name).join(", ")}
+                                 </p>
+                               </div>
+                            </div>
+                          ))}
+                        </div>
+                      </Card>
+                    )}
                   </div>
 
                   {/* Spotify Player Iframe Embed */}

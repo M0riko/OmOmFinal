@@ -31,7 +31,11 @@ import { useI18n } from "@/hooks/useI18n";
 import { useAI } from "@/hooks/useAI";
 import { useDaily } from "@/hooks/useDaily";
 import { useWorkouts } from "@/hooks/useWorkouts";
+import { useWeight } from "@/hooks/useWeight";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 export default function Profile() {
   const { user, updateUser, logout, toggleDevRole } = useAuth();
@@ -43,12 +47,29 @@ export default function Profile() {
 
   const { totals, streakDays } = useDaily();
   const { completedWorkouts } = useWorkouts();
+  const { currentWeight: trackedWeight, addWeight, getWeightTrend } = useWeight();
+
+  const [weightModalOpen, setWeightModalOpen] = useState(false);
+  const [weightValue, setWeightValue] = useState("");
+
+  const handleWeightSubmit = () => {
+    const weight = parseFloat(weightValue);
+    if (isNaN(weight) || weight <= 0 || weight > 500) {
+      toast.error("Введіть правильну вагу (1-500 кг)");
+      return;
+    }
+    addWeight(weight);
+    toast.success(`Додано вагу: ${weight} кг`);
+    setWeightModalOpen(false);
+    setWeightValue("");
+  };
 
   // Real data for profile
   const profileData = useMemo(() => {
     const caloriesTarget = user?.calculatedCalories || user?.targets?.calories || 2000;
-    const currentWeight = user?.weight || 0;
+    const currentWeight = trackedWeight || user?.weight || 0;
     const targetWeight = user?.targetWeight || currentWeight;
+    const weightTrend = getWeightTrend() || 0;
     
     // Dynamic level based on real streak days
     const level = Math.max(1, Math.floor(streakDays / 7) + 1);
@@ -62,6 +83,7 @@ export default function Profile() {
       streakDays: streakDays || 0,
       currentWeight,
       targetWeight,
+      weightTrend,
       dailyCalories: caloriesTarget,
       weeklyProgress: {
         calories: { 
@@ -297,15 +319,22 @@ export default function Profile() {
             className="grid grid-cols-3 gap-4"
           >
             {/* Weight */}
-            <Card className="p-4 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20">
+            <Card 
+              className="p-4 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20 cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => setWeightModalOpen(true)}
+            >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center shrink-0">
                   <Target className="w-5 h-5 text-blue-500" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Вага</p>
                   <p className="text-lg font-bold">{profileData.currentWeight} кг</p>
-                  <p className="text-xs text-green-500">-2.5 кг</p>
+                  {profileData.weightTrend !== 0 && (
+                    <p className={`text-xs ${profileData.weightTrend > 0 ? 'text-red-500' : 'text-green-500'}`}>
+                      {profileData.weightTrend > 0 ? '+' : ''}{profileData.weightTrend.toFixed(1)} кг/нед
+                    </p>
+                  )}
                 </div>
               </div>
             </Card>
@@ -313,13 +342,13 @@ export default function Profile() {
             {/* Target */}
             <Card className="p-4 bg-gradient-to-br from-purple-500/10 to-purple-600/5 border border-purple-500/20">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center shrink-0">
                   <Heart className="w-5 h-5 text-purple-500" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Ціль</p>
                   <p className="text-lg font-bold">{profileData.targetWeight} кг</p>
-                  <p className="text-xs text-muted-foreground">5.5 кг до цілі</p>
+                  <p className="text-xs text-muted-foreground">{Math.abs(profileData.currentWeight - profileData.targetWeight).toFixed(1)} кг до цілі</p>
                 </div>
               </div>
             </Card>
@@ -327,13 +356,15 @@ export default function Profile() {
             {/* Calories */}
             <Card className="p-4 bg-gradient-to-br from-orange-500/10 to-orange-600/5 border border-orange-500/20">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center shrink-0">
                   <Zap className="w-5 h-5 text-orange-500" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Калорії</p>
                   <p className="text-lg font-bold">{profileData.dailyCalories}</p>
-                  <p className="text-xs text-green-500">+150</p>
+                  <p className={`text-xs ${totals.calories > profileData.dailyCalories ? 'text-red-500' : 'text-green-500'}`}>
+                    {totals.calories - profileData.dailyCalories > 0 ? '+' : ''}{Math.round(totals.calories - profileData.dailyCalories)}
+                  </p>
                 </div>
               </div>
             </Card>
@@ -610,6 +641,37 @@ export default function Profile() {
 
         </main>
         <MobileBottomNav />
+
+        {/* Модальне вікно для додавання ваги */}
+        <Dialog open={weightModalOpen} onOpenChange={setWeightModalOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Трекер ваги</DialogTitle>
+              <DialogDescription className="sr-only">
+                Введіть вашу поточну вагу для відстеження змін.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="weight-value">Введіть поточну вагу (кг)</Label>
+                <Input
+                  id="weight-value"
+                  type="number"
+                  step="0.1"
+                  min="1"
+                  max="500"
+                  value={weightValue}
+                  onChange={(e) => setWeightValue(e.target.value)}
+                  placeholder={profileData.currentWeight.toString()}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleWeightSubmit} className="flex-1">Зберегти</Button>
+                <Button variant="outline" onClick={() => setWeightModalOpen(false)}>Скасувати</Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

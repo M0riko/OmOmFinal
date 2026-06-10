@@ -8,6 +8,7 @@ import { MealsSection } from "@/components/MealsSection";
 import { ActivityWater } from "@/components/ActivityWater";
 import { StepTracker } from "@/components/StepTracker";
 import { SleepTracker } from "@/components/SleepTracker";
+import { WeightTrackerWidget } from "@/components/WeightTrackerWidget";
 import { MotivationBanner } from "@/components/MotivationBanner";
 import { AddMealModal } from "@/components/AddMealModal";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
@@ -23,6 +24,7 @@ import { useDaily } from "@/hooks/useDaily";
 import { useWater } from "@/hooks/useWater";
 import { useWeight } from "@/hooks/useWeight";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 const Index = () => {
   const { user } = useAuth();
@@ -30,6 +32,7 @@ const Index = () => {
   const { todayWater, addWater } = useWater();
   const { addWeight } = useWeight();
   const { t } = useI18n();
+  const navigate = useNavigate();
   
   const [addOpen, setAddOpen] = useState(false);
   const [presetMealType, setPresetMealType] = useState<"breakfast" | "lunch" | "dinner" | "snack" | undefined>(undefined);
@@ -116,7 +119,13 @@ const Index = () => {
 
   const handleAIAction = (action: string) => {
     console.log("AI Action:", action);
-    // Тут можна додати логіку для різних дій AI
+    if (action === t("viewRecipes")) {
+      navigate("/recipes");
+    } else if (action === t("viewProgress") || action === t("viewStatistics")) {
+      navigate("/statistics");
+    } else if (action === t("addWater")) {
+      handleAddWater();
+    }
   };
 
   return (
@@ -146,11 +155,12 @@ const Index = () => {
               
               {/* Mobile-only Quick Actions Removed */}
 
-              {/* Activity & Water & Steps & Sleep */}
+              {/* Activity & Water & Steps & Sleep & Weight */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <ActivityWater />
                 <StepTracker />
                 <SleepTracker />
+                <WeightTrackerWidget onAddWeight={handleAddWeight} />
               </div>
               
               {/* Mobile-only AI Insights */}

@@ -7,19 +7,31 @@ let transporter;
 async function setupTransporter() {
   if (!transporter) {
     try {
-      // Create a test account dynamically
-      let testAccount = await nodemailer.createTestAccount();
-      
-      transporter = nodemailer.createTransport({
-        host: "smtp.ethereal.email",
-        port: 587,
-        secure: false, // true for 465, false for other ports
-        auth: {
-          user: testAccount.user, // generated ethereal user
-          pass: testAccount.pass, // generated ethereal password
-        },
-      });
-      console.log(`📧 Ethereal Email configured with account: ${testAccount.user}`);
+      if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+        // Use real Gmail account
+        transporter = nodemailer.createTransport({
+          service: 'gmail',
+          auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+          },
+        });
+        console.log(`📧 Gmail SMTP configured with account: ${process.env.EMAIL_USER}`);
+      } else {
+        // Fallback to Ethereal Email for testing
+        let testAccount = await nodemailer.createTestAccount();
+        
+        transporter = nodemailer.createTransport({
+          host: "smtp.ethereal.email",
+          port: 587,
+          secure: false, // true for 465, false for other ports
+          auth: {
+            user: testAccount.user, // generated ethereal user
+            pass: testAccount.pass, // generated ethereal password
+          },
+        });
+        console.log(`📧 Ethereal Email fallback configured with account: ${testAccount.user}`);
+      }
     } catch (err) {
       console.error('Failed to create Ethereal Email account', err);
     }

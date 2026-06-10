@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Calendar, Flame, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -10,9 +10,37 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 
 export function MealCalendar() {
   const { user } = useAuth();
-  const { entries } = useDaily();
+  const { entries: todayEntries } = useDaily();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<any | null>(null);
+  const [allEntries, setAllEntries] = useState<any[]>([]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('omomo_auth_token');
+    const API_BASE = import.meta.env.PROD
+      ? (import.meta.env.VITE_API_BASE_URL && !import.meta.env.VITE_API_BASE_URL.includes('localhost') ? import.meta.env.VITE_API_BASE_URL : '')
+      : (import.meta.env.VITE_API_BASE_URL || '');
+      
+    if (token) {
+      fetch(`${API_BASE}/api/meals`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.meals) setAllEntries(data.meals);
+      })
+      .catch(console.error);
+    }
+  }, []);
+
+  const entries = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const pastEntries = allEntries.filter(e => {
+        const d = new Date(e.date || new Date()).toISOString().split('T')[0];
+        return d !== today;
+    });
+    return [...pastEntries, ...todayEntries];
+  }, [allEntries, todayEntries]);
   
   const targetCalories = user?.targets?.calories || 2000;
 
@@ -48,10 +76,10 @@ export function MealCalendar() {
       
       // Calculate totals for the day
       const dayTotals = dayEntries.reduce((totals, entry) => ({
-        calories: totals.calories + entry.calories,
-        protein: totals.protein + entry.protein,
-        fats: totals.fats + entry.fats,
-        carbs: totals.carbs + entry.carbs
+        calories: totals.calories + (entry.calories || 0),
+        protein: totals.protein + (entry.protein || 0),
+        fats: totals.fats + (entry.fats || 0),
+        carbs: totals.carbs + (entry.carbs || 0)
       }), { calories: 0, protein: 0, fats: 0, carbs: 0 });
       
       const progress = targetCalories ? (dayTotals.calories / targetCalories) * 100 : 0;

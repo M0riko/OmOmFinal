@@ -16,7 +16,8 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isLoading) return;
 
-    if (!isAuthenticated && location.pathname !== "/auth" && location.pathname !== "/auth/google/callback") {
+    const publicRoutes = ["/auth", "/auth/google/callback", "/terms", "/privacy", "/reset-password", "/verify-email"];
+    if (!isAuthenticated && !publicRoutes.includes(location.pathname)) {
       try { sessionStorage.setItem("omom_post_login", location.pathname + location.search); } catch {}
       navigate("/auth", { replace: true });
     }
@@ -26,17 +27,12 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     if (isLoading) return;
 
     if (isAuthenticated && location.pathname === "/auth") {
-      console.log("AuthGate: User authenticated on /auth, checking onboarding");
-      console.log("AuthGate: Onboarding complete:", isOnboardingComplete);
-      
       // Если пользователь авторизован, но онбординг не завершен, остаемся на /auth
       if (!isOnboardingComplete) {
-        console.log("AuthGate: Staying on /auth for onboarding");
         return;
       }
       
       // Если онбординг завершен, перенаправляем на главную
-      console.log("AuthGate: Onboarding complete, redirecting to home");
       let target = "/";
       try { target = sessionStorage.getItem("omom_post_login") || "/"; } catch {}
       navigate(target, { replace: true });
@@ -48,8 +44,8 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isLoading) return;
 
-    if (isAuthenticated && !isOnboardingComplete && location.pathname !== "/auth" && location.pathname !== "/auth/google/callback") {
-      console.log("AuthGate: Redirecting to /auth for onboarding");
+    const publicRoutes = ["/auth", "/auth/google/callback", "/terms", "/privacy", "/reset-password", "/verify-email"];
+    if (isAuthenticated && !isOnboardingComplete && !publicRoutes.includes(location.pathname)) {
       navigate("/auth", { replace: true });
     }
   }, [isLoading, isAuthenticated, location.pathname, navigate, isOnboardingComplete]);

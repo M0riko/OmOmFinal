@@ -13,6 +13,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { useDaily } from "@/hooks/useDaily";
 import { useWater } from "@/hooks/useWater";
 import { useWeight } from "@/hooks/useWeight";
+import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 const API_BASE = import.meta.env.PROD
   ? (import.meta.env.VITE_API_BASE_URL && !import.meta.env.VITE_API_BASE_URL.includes('localhost') ? import.meta.env.VITE_API_BASE_URL : '')
@@ -41,9 +45,24 @@ export default function Statistics() {
   const [statsData, setStatsData] = useState<any>(null);
   const [isLoadingStats, setIsLoadingStats] = useState<boolean>(true);
   const { user } = useAuth();
-  const { entries: weightEntries, currentWeight, getWeightTrend } = useWeight();
+  const { entries: weightEntries, currentWeight, getWeightTrend, addWeight } = useWeight();
   const { totals: dailyTotals } = useDaily();
   const { waterGoal, todayWater } = useWater();
+
+  const [weightModalOpen, setWeightModalOpen] = useState(false);
+  const [weightValue, setWeightValue] = useState("");
+
+  const handleWeightSubmit = () => {
+    const weight = parseFloat(weightValue);
+    if (isNaN(weight) || weight <= 0 || weight > 500) {
+      toast.error("Введіть правильну вагу (1-500 кг)");
+      return;
+    }
+    addWeight(weight);
+    toast.success(`Додано вагу: ${weight} кг`);
+    setWeightModalOpen(false);
+    setWeightValue("");
+  };
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -295,10 +314,15 @@ export default function Statistics() {
                 <h1 className="text-2xl md:text-3xl font-bold text-foreground tracking-tight">Статистика</h1>
                 <p className="text-muted-foreground mt-1">Аналіз твого прогресу та досягнень</p>
               </div>
-              <Button onClick={handleExportPDF} variant="outline" className="gap-2 rounded-xl h-10">
-                <HugeiconsIcon icon={Download04Icon} size={18} />
-                Експорт PDF
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={() => setWeightModalOpen(true)} variant="outline" className="gap-2 rounded-xl h-10">
+                  Оновити вагу
+                </Button>
+                <Button onClick={handleExportPDF} variant="outline" className="gap-2 rounded-xl h-10 hidden sm:flex">
+                  <HugeiconsIcon icon={Download04Icon} size={18} />
+                  Експорт PDF
+                </Button>
+              </div>
             </div>
           </motion.div>
 
@@ -337,6 +361,37 @@ export default function Statistics() {
           </motion.div>
         </main>
         <MobileBottomNav />
+
+        {/* Модальне вікно для додавання ваги */}
+        <Dialog open={weightModalOpen} onOpenChange={setWeightModalOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Трекер ваги</DialogTitle>
+              <DialogDescription className="sr-only">
+                Введіть вашу поточну вагу для відстеження змін.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="weight-value-stats">Введіть поточну вагу (кг)</Label>
+                <Input
+                  id="weight-value-stats"
+                  type="number"
+                  step="0.1"
+                  min="1"
+                  max="500"
+                  value={weightValue}
+                  onChange={(e) => setWeightValue(e.target.value)}
+                  placeholder={(currentWeight || user?.weight || 0).toString()}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleWeightSubmit} className="flex-1">Зберегти</Button>
+                <Button variant="outline" onClick={() => setWeightModalOpen(false)}>Скасувати</Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
