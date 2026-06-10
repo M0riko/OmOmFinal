@@ -43,7 +43,8 @@ const sendVerificationEmail = async (email, token) => {
   try {
     const t = await setupTransporter();
     
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const defaultUrl = process.env.NODE_ENV === 'production' ? 'https://om-om-final.vercel.app' : 'http://localhost:5173';
+    const frontendUrl = process.env.FRONTEND_URL || defaultUrl;
     const verificationUrl = `${frontendUrl}/verify-email?token=${token}`;
     
     let info = await t.sendMail({
@@ -70,7 +71,8 @@ const sendPasswordResetEmail = async (email, token) => {
   try {
     const t = await setupTransporter();
     
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const defaultUrl = process.env.NODE_ENV === 'production' ? 'https://om-om-final.vercel.app' : 'http://localhost:5173';
+    const frontendUrl = process.env.FRONTEND_URL || defaultUrl;
     const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
     
     let info = await t.sendMail({
