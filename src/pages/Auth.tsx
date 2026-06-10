@@ -449,13 +449,6 @@ export default function AuthPage() {
                       OmOm
                     </h1>
                   </div>
-                  <button 
-                    onClick={clearAllData}
-                    className="text-xs text-muted-foreground hover:text-foreground underline transition-colors"
-                    title="Очистити всі дані (для тестування)"
-                  >
-                    Очистити дані
-                  </button>
                 </div>
                 
                 <div className="space-y-4">

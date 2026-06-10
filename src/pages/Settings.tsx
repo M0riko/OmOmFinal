@@ -92,6 +92,7 @@ export default function Settings() {
         weight: parseFloat(formData.weight as any) || undefined,
         height: parseFloat(formData.height as any) || undefined,
         targetWeight: parseFloat(formData.targetWeight as any) || undefined,
+        username: formData.name, // The backend expects 'username' instead of 'name'
       };
 
       const token = localStorage.getItem('omomo_auth_token');
