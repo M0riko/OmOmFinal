@@ -256,7 +256,6 @@ router.post('/auth/forgot-password', async (req, res) => {
     user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
     await user.save();
 
-    const resetUrl = `http://localhost:5173/reset-password?token=${resetToken}`;
     await sendPasswordResetEmail(user.email, resetToken);
 
     res.json({ message: 'If an account exists, a reset link has been sent.' });
