@@ -99,9 +99,9 @@ export function MobileBottomNav() {
           </SheetTrigger>
           <SheetContent 
             side="bottom" 
-            className="bg-card border-t border-border rounded-t-3xl pb-[calc(env(safe-area-inset-bottom)+1rem)] max-h-[50vh]"
+            className="bg-card border-t border-border rounded-t-3xl pb-[calc(env(safe-area-inset-bottom)+1rem)] max-h-[85vh] overflow-y-auto scrollbar-thin scrollbar-thumb-muted"
           >
-            <div className="space-y-4 pt-4">
+            <div className="space-y-4 pt-4 pb-4">
               <h3 className="text-base font-semibold text-foreground px-2 mb-4">Додаткові розділи</h3>
               <div className="grid grid-cols-2 gap-3 px-2">
                 {navItems

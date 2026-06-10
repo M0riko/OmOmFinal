@@ -13,6 +13,8 @@ import { Plus, Sparkles, Save, Calendar, Utensils } from "lucide-react";
 import { Recipe } from "@/lib/api";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { RecipeDetailsModal } from "@/components/RecipeDetailsModal";
+import { generateDetailedRecipe } from "@/lib/openai-ai";
 
 type MealType = "breakfast" | "lunch" | "dinner" | "snack";
 
@@ -64,6 +66,10 @@ export default function MealPlanNew() {
   const [selectedMealType, setSelectedMealType] = useState<MealType>("breakfast");
   const [aiGeneratorOpen, setAiGeneratorOpen] = useState(false);
   const [savedPlans, setSavedPlans] = useState<SavedPlan[]>([]);
+  
+  const [recipeModalOpen, setRecipeModalOpen] = useState(false);
+  const [selectedRecipeDetails, setSelectedRecipeDetails] = useState<any>(null);
+  const [loadingRecipe, setLoadingRecipe] = useState(false);
 
   const STORAGE_KEY = "omomo_meal_plans";
 
@@ -202,54 +208,97 @@ export default function MealPlanNew() {
     }
   };
 
+  const handleViewRecipe = async (meal: any) => {
+    if (meal.recipeDetails) {
+      setSelectedRecipeDetails(meal.recipeDetails);
+      setRecipeModalOpen(true);
+      return;
+    }
+    
+    try {
+      setLoadingRecipe(true);
+      toast.info("Генеруємо детальний рецепт...");
+      
+      const userDietType = (user as any)?.preferences?.dietType || 'всі';
+      const userAllergies = (user as any)?.preferences?.excludedFoods?.join(', ') || '';
+      
+      const aiRecipe = await generateDetailedRecipe(meal.name, meal.calories, userDietType, userAllergies);
+      
+      meal.recipeDetails = {
+        title: aiRecipe.title || meal.name,
+        image: meal.image || `https://loremflickr.com/150/150/food,dish?random=${encodeURIComponent(meal.name)}`,
+        readyInMinutes: aiRecipe.readyInMinutes || 20,
+        servings: aiRecipe.servings || 1,
+        nutrition: aiRecipe.nutrition || { calories: meal.calories, protein: meal.protein, fat: meal.fat, carbs: meal.carbs },
+        ingredients: aiRecipe.ingredients || [],
+        instructions: aiRecipe.instructions || []
+      };
+      
+      setSelectedRecipeDetails(meal.recipeDetails);
+      setRecipeModalOpen(true);
+    } catch(e: any) {
+      toast.error(e.message || "Не вдалося згенерувати рецепт");
+    } finally {
+      setLoadingRecipe(false);
+    }
+  };
+
   const handleAIPlanGenerated = (plan: any) => {
+    const calcCals = (target: number, ratio: number) => Math.round(target * ratio);
+    const cb = calcCals(targetCalories, 0.30);
+    const cl = calcCals(targetCalories, 0.40);
+    const cd = calcCals(targetCalories, 0.25);
+    const cs = calcCals(targetCalories, 0.05);
+
+    const calcMacs = (target: number, ratio: number) => Math.round(target * ratio);
+    
     // Convert AI plan to our format
     const newPlan: DailyPlan = {
-      breakfast: plan.breakfast?.map((meal: Recipe) => ({
+      breakfast: plan.breakfast?.map((meal: Recipe, i: number, arr: any[]) => ({
         id: crypto.randomUUID(),
         recipeId: meal.id,
         name: meal.title,
         mealType: "breakfast" as MealType,
-        calories: Math.round((meal.nutrition?.nutrients.find((n: any) => n.name === "Calories")?.amount || 300) / meal.servings),
-        protein: Math.round((meal.nutrition?.nutrients.find((n: any) => n.name === "Protein")?.amount || 15) / meal.servings),
-        fat: Math.round((meal.nutrition?.nutrients.find((n: any) => n.name === "Fat")?.amount || 10) / meal.servings),
-        carbs: Math.round((meal.nutrition?.nutrients.find((n: any) => n.name === "Carbohydrates")?.amount || 30) / meal.servings),
+        calories: Math.round(cb / arr.length),
+        protein: Math.round(calcMacs(targetProtein, 0.25) / arr.length),
+        fat: Math.round(calcMacs(targetFat, 0.25) / arr.length),
+        carbs: Math.round(calcMacs(targetCarbs, 0.30) / arr.length),
         image: meal.image,
         date: selectedDate
       })) || [],
-      lunch: plan.lunch?.map((meal: Recipe) => ({
+      lunch: plan.lunch?.map((meal: Recipe, i: number, arr: any[]) => ({
         id: crypto.randomUUID(),
         recipeId: meal.id,
         name: meal.title,
         mealType: "lunch" as MealType,
-        calories: Math.round((meal.nutrition?.nutrients.find((n: any) => n.name === "Calories")?.amount || 300) / meal.servings),
-        protein: Math.round((meal.nutrition?.nutrients.find((n: any) => n.name === "Protein")?.amount || 15) / meal.servings),
-        fat: Math.round((meal.nutrition?.nutrients.find((n: any) => n.name === "Fat")?.amount || 10) / meal.servings),
-        carbs: Math.round((meal.nutrition?.nutrients.find((n: any) => n.name === "Carbohydrates")?.amount || 30) / meal.servings),
+        calories: Math.round(cl / arr.length),
+        protein: Math.round(calcMacs(targetProtein, 0.40) / arr.length),
+        fat: Math.round(calcMacs(targetFat, 0.40) / arr.length),
+        carbs: Math.round(calcMacs(targetCarbs, 0.40) / arr.length),
         image: meal.image,
         date: selectedDate
       })) || [],
-      dinner: plan.dinner?.map((meal: Recipe) => ({
+      dinner: plan.dinner?.map((meal: Recipe, i: number, arr: any[]) => ({
         id: crypto.randomUUID(),
         recipeId: meal.id,
         name: meal.title,
         mealType: "dinner" as MealType,
-        calories: Math.round((meal.nutrition?.nutrients.find((n: any) => n.name === "Calories")?.amount || 300) / meal.servings),
-        protein: Math.round((meal.nutrition?.nutrients.find((n: any) => n.name === "Protein")?.amount || 15) / meal.servings),
-        fat: Math.round((meal.nutrition?.nutrients.find((n: any) => n.name === "Fat")?.amount || 10) / meal.servings),
-        carbs: Math.round((meal.nutrition?.nutrients.find((n: any) => n.name === "Carbohydrates")?.amount || 30) / meal.servings),
+        calories: Math.round(cd / arr.length),
+        protein: Math.round(calcMacs(targetProtein, 0.30) / arr.length),
+        fat: Math.round(calcMacs(targetFat, 0.30) / arr.length),
+        carbs: Math.round(calcMacs(targetCarbs, 0.25) / arr.length),
         image: meal.image,
         date: selectedDate
       })) || [],
-      snack: plan.snack?.map((meal: Recipe) => ({
+      snack: plan.snack?.map((meal: Recipe, i: number, arr: any[]) => ({
         id: crypto.randomUUID(),
         recipeId: meal.id,
         name: meal.title,
         mealType: "snack" as MealType,
-        calories: Math.round((meal.nutrition?.nutrients.find((n: any) => n.name === "Calories")?.amount || 300) / meal.servings),
-        protein: Math.round((meal.nutrition?.nutrients.find((n: any) => n.name === "Protein")?.amount || 15) / meal.servings),
-        fat: Math.round((meal.nutrition?.nutrients.find((n: any) => n.name === "Fat")?.amount || 10) / meal.servings),
-        carbs: Math.round((meal.nutrition?.nutrients.find((n: any) => n.name === "Carbohydrates")?.amount || 30) / meal.servings),
+        calories: Math.round(cs / arr.length),
+        protein: Math.round(calcMacs(targetProtein, 0.05) / arr.length),
+        fat: Math.round(calcMacs(targetFat, 0.05) / arr.length),
+        carbs: Math.round(calcMacs(targetCarbs, 0.05) / arr.length),
         image: meal.image,
         date: selectedDate
       })) || []
@@ -366,6 +415,7 @@ export default function MealPlanNew() {
                 meals={dailyPlan.breakfast}
                 onAddMeal={() => handleAddMeal("breakfast")}
                 onRemoveMeal={(id) => handleRemoveMeal("breakfast", id)}
+                onViewRecipe={handleViewRecipe}
               />
               
               <MealSection
@@ -373,6 +423,7 @@ export default function MealPlanNew() {
                 meals={dailyPlan.lunch}
                 onAddMeal={() => handleAddMeal("lunch")}
                 onRemoveMeal={(id) => handleRemoveMeal("lunch", id)}
+                onViewRecipe={handleViewRecipe}
               />
               
               <MealSection
@@ -380,6 +431,7 @@ export default function MealPlanNew() {
                 meals={dailyPlan.dinner}
                 onAddMeal={() => handleAddMeal("dinner")}
                 onRemoveMeal={(id) => handleRemoveMeal("dinner", id)}
+                onViewRecipe={handleViewRecipe}
               />
               
               <MealSection
@@ -387,6 +439,7 @@ export default function MealPlanNew() {
                 meals={dailyPlan.snack}
                 onAddMeal={() => handleAddMeal("snack")}
                 onRemoveMeal={(id) => handleRemoveMeal("snack", id)}
+                onViewRecipe={handleViewRecipe}
               />
 
               {/* Nutrition Summary */}
@@ -426,6 +479,12 @@ export default function MealPlanNew() {
             targetFat={targetFat}
             targetCarbs={targetCarbs}
             onPlanGenerated={handleAIPlanGenerated}
+          />
+
+          <RecipeDetailsModal 
+            isOpen={recipeModalOpen} 
+            onClose={() => setRecipeModalOpen(false)} 
+            recipe={selectedRecipeDetails} 
           />
         </main>
         <MobileBottomNav />

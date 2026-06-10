@@ -465,48 +465,48 @@ export function RecipeDetails({ recipe, open, onOpenChange, isFavorite, onToggle
                     
                     if (title.includes('chicken') || title.includes('курятина')) {
                       fallbackSteps.push(
-                        { number: 1, step: 'Season the chicken breast with salt and pepper on both sides.' },
-                        { number: 2, step: 'Heat olive oil in a large skillet over medium-high heat.' },
-                        { number: 3, step: 'Add the chicken breast and cook for 6-7 minutes per side until golden brown.' },
-                        { number: 4, step: 'Add minced garlic and cook for 1 minute until fragrant.' },
-                        { number: 5, step: 'Remove from heat and let rest for 5 minutes before serving.' }
+                        { number: 1, step: 'Приправте курячу грудку сіллю та перцем з обох боків.' },
+                        { number: 2, step: 'Розігрійте оливкову олію на великій сковороді на середньо-сильному вогні.' },
+                        { number: 3, step: 'Додайте курячу грудку і смажте по 6-7 хвилин з кожного боку до золотистої скоринки.' },
+                        { number: 4, step: 'Додайте подрібнений часник і готуйте 1 хвилину до появи аромату.' },
+                        { number: 5, step: 'Зніміть з вогню і дайте відпочити 5 хвилин перед подачею.' }
                       );
                     } else if (title.includes('pasta') || title.includes('паста')) {
                       fallbackSteps.push(
-                        { number: 1, step: 'Bring a large pot of salted water to boil.' },
-                        { number: 2, step: 'Add pasta and cook according to package directions until al dente.' },
-                        { number: 3, step: 'Meanwhile, heat olive oil in a large pan over medium heat.' },
-                        { number: 4, step: 'Add diced onion and minced garlic, cook until softened.' },
-                        { number: 5, step: 'Add tomato sauce and bring to a simmer.' },
-                        { number: 6, step: 'Drain pasta and add to the sauce, toss to combine.' },
-                        { number: 7, step: 'Garnish with fresh basil and serve immediately.' }
+                        { number: 1, step: 'Доведіть до кипіння велику каструлю з підсоленою водою.' },
+                        { number: 2, step: 'Додайте макарони і варіть згідно з інструкцією на упаковці до стану аль денте.' },
+                        { number: 3, step: 'Тим часом розігрійте оливкову олію у великій сковороді на середньому вогні.' },
+                        { number: 4, step: 'Додайте нарізану цибулю та подрібнений часник, готуйте до м\'якості.' },
+                        { number: 5, step: 'Додайте томатний соус і доведіть до кипіння.' },
+                        { number: 6, step: 'Злийте воду з макаронів, додайте їх до соусу та перемішайте.' },
+                        { number: 7, step: 'Прикрасьте свіжим базиліком і подавайте відразу.' }
                       );
                     } else if (title.includes('salad') || title.includes('салат')) {
                       fallbackSteps.push(
-                        { number: 1, step: 'Wash and dry all vegetables thoroughly.' },
-                        { number: 2, step: 'Chop lettuce, dice tomatoes, and slice cucumber.' },
-                        { number: 3, step: 'Combine all vegetables in a large bowl.' },
-                        { number: 4, step: 'In a small bowl, whisk together olive oil, vinegar, and salt.' },
-                        { number: 5, step: 'Pour dressing over salad and toss gently to combine.' },
-                        { number: 6, step: 'Serve immediately or refrigerate until ready to serve.' }
+                        { number: 1, step: 'Ретельно вимийте і висушіть всі овочі.' },
+                        { number: 2, step: 'Наріжте салат, помідори та огірок.' },
+                        { number: 3, step: 'Змішайте всі овочі у великій мисці.' },
+                        { number: 4, step: 'У невеликій мисці збийте оливкову олію, оцет та сіль.' },
+                        { number: 5, step: 'Полийте салат заправкою та обережно перемішайте.' },
+                        { number: 6, step: 'Подавайте відразу або зберігайте в холодильнику до подачі.' }
                       );
                     } else if (title.includes('soup') || title.includes('суп')) {
                       fallbackSteps.push(
-                        { number: 1, step: 'Heat chicken broth in a large pot over medium heat.' },
-                        { number: 2, step: 'Dice carrots, onion, and celery into small pieces.' },
-                        { number: 3, step: 'Add vegetables to the broth and bring to a boil.' },
-                        { number: 4, step: 'Reduce heat and simmer for 20-25 minutes until vegetables are tender.' },
-                        { number: 5, step: 'Season with salt and pepper to taste.' },
-                        { number: 6, step: 'Serve hot with fresh herbs if desired.' }
+                        { number: 1, step: 'Розігрійте курячий бульйон у великій каструлі на середньому вогні.' },
+                        { number: 2, step: 'Наріжте моркву, цибулю та селеру дрібними шматочками.' },
+                        { number: 3, step: 'Додайте овочі в бульйон і доведіть до кипіння.' },
+                        { number: 4, step: 'Зменшіть вогонь і варіть 20-25 хвилин, поки овочі не стануть м\'якими.' },
+                        { number: 5, step: 'Приправте сіллю та перцем за смаком.' },
+                        { number: 6, step: 'Подавайте гарячим зі свіжою зеленню за бажанням.' }
                       );
                     } else {
                       // Generic fallback
                       fallbackSteps.push(
-                        { number: 1, step: 'Prepare all ingredients according to the recipe.' },
-                        { number: 2, step: 'Heat oil in a pan over medium heat.' },
-                        { number: 3, step: 'Add main ingredients and cook until done.' },
-                        { number: 4, step: 'Season with salt and pepper to taste.' },
-                        { number: 5, step: 'Serve hot and enjoy!' }
+                        { number: 1, step: 'Підготуйте всі інгредієнти згідно з рецептом.' },
+                        { number: 2, step: 'Розігрійте сковороду або каструлю на середньому вогні.' },
+                        { number: 3, step: 'Додайте основні інгредієнти та готуйте до повної готовності.' },
+                        { number: 4, step: 'Приправте сіллю та спеціями за смаком.' },
+                        { number: 5, step: 'Подавайте гарячим та насолоджуйтесь!' }
                       );
                     }
                     

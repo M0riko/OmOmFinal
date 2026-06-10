@@ -16,7 +16,7 @@ import { LiveWorkoutMode } from "@/components/LiveWorkoutMode";
 import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
 import { Activity, Calendar, Trophy, Target } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useWorkouts } from "@/hooks/useWorkouts";
 import { useI18n } from "@/hooks/useI18n";
 import { toast } from "sonner";
@@ -39,6 +39,20 @@ export default function Training() {
   
   const [activeTab, setActiveTab] = useState<"calendar" | "analytics" | "goals" | "library" | "constructor">("calendar");
   const [currentDate, setCurrentDate] = useState(new Date());
+  
+  const [selectedWorkout, setSelectedWorkout] = useState<any>(null);
+  const [isResting, setIsResting] = useState(false);
+  const [restTime, setRestTime] = useState(60);
+
+  useEffect(() => {
+    if (isResting && restTime > 0) {
+      const timer = setTimeout(() => setRestTime(restTime - 1), 1000);
+      return () => clearTimeout(timer);
+    } else if (isResting && restTime === 0) {
+      setIsResting(false);
+      toast.success(locale === "uk" ? "Час відпочинку закінчився!" : "Rest time is over!");
+    }
+  }, [isResting, restTime]);
 
   // {t("dashboardStats")}
   const dashboardStats = {
@@ -93,15 +107,16 @@ export default function Training() {
   };
 
   const handleTakeRest = () => {
-    toast.info("Час відпочинку!");
+    setRestTime(60);
+    setIsResting(true);
   };
 
   const handleWorkoutClick = (workout: any) => {
-    toast.info(`Перегляд тренування: ${workout.name}`);
+    setSelectedWorkout(workout);
   };
 
   const handleViewWorkout = (workout: any) => {
-    toast.info(`Деталі тренування: ${workout.name}`);
+    setSelectedWorkout(workout);
   };
 
   const handleAIWorkoutStart = (workout: any) => {
@@ -250,6 +265,85 @@ export default function Training() {
             </DialogContent>
           </Dialog>
         )}
+
+        {/* Деталі тренування */}
+        {selectedWorkout && (
+          <Dialog open={!!selectedWorkout} onOpenChange={(open) => !open && setSelectedWorkout(null)}>
+            <DialogContent className="max-w-md rounded-2xl bg-card border border-border/40">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-bold">{selectedWorkout.name}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center bg-muted/40 p-3 rounded-xl border border-border/20">
+                  <span className="text-muted-foreground font-medium">{t("workoutType") || "Тип"}</span>
+                  <span className="font-bold capitalize">{selectedWorkout.type === 'strength' ? (t("strengthTraining") || 'Силове') : (t("cardioTraining") || 'Кардіо')}</span>
+                </div>
+                <div className="flex justify-between items-center bg-muted/40 p-3 rounded-xl border border-border/20">
+                  <span className="text-muted-foreground font-medium">{t("duration") || "Тривалість"}</span>
+                  <span className="font-bold">{selectedWorkout.duration} {t("min") || "хв"}</span>
+                </div>
+                
+                {selectedWorkout.exercises && selectedWorkout.exercises.length > 0 ? (
+                  <div className="mt-4">
+                    <h4 className="font-bold text-sm text-muted-foreground uppercase tracking-wider mb-3">
+                      {t("exercises") || "Вправи"}
+                    </h4>
+                    <ul className="space-y-2">
+                      {selectedWorkout.exercises.map((ex: any, i: number) => (
+                        <li key={i} className="flex justify-between items-center p-3 rounded-xl border border-border/40 bg-background/50 hover:bg-muted/30 transition-colors">
+                          <span className="font-semibold text-sm">{ex.name}</span>
+                          <span className="text-xs font-bold text-primary px-2 py-1 bg-primary/10 rounded-md">
+                            {ex.sets.length} {t("sets") || "підходів"}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <div className="text-center py-6">
+                    <p className="text-muted-foreground text-sm">Ця програма тренування ще не має вправ.</p>
+                  </div>
+                )}
+                
+                <div className="flex justify-end gap-2 mt-6">
+                  <Button variant="outline" className="rounded-xl flex-1" onClick={() => setSelectedWorkout(null)}>
+                    {t("cancel") || "Закрити"}
+                  </Button>
+                  <Button 
+                    className="rounded-xl flex-1 shadow-md shadow-primary/20" 
+                    onClick={() => {
+                       startWorkout(selectedWorkout.id);
+                       setSelectedWorkout(null);
+                    }}
+                  >
+                    {t("startWorkout") || "Почати"}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {/* Таймер відпочинку */}
+        <Dialog open={isResting} onOpenChange={setIsResting}>
+          <DialogContent className="max-w-xs text-center rounded-3xl border border-border/50 bg-card p-8">
+            <DialogHeader>
+              <DialogTitle className="text-center text-xl font-bold">{t("restTime") || "Час відпочинку"}</DialogTitle>
+            </DialogHeader>
+            <div className="py-6">
+              <div className="text-7xl font-black text-primary mb-6 tabular-nums tracking-tighter">
+                {Math.floor(restTime / 60)}:{(restTime % 60).toString().padStart(2, '0')}
+              </div>
+              <Button 
+                variant="outline" 
+                className="w-full rounded-xl border-destructive/30 text-destructive hover:bg-destructive hover:text-white transition-all font-bold" 
+                onClick={() => setIsResting(false)}
+              >
+                Завершити відпочинок
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

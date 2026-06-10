@@ -65,6 +65,9 @@ function ErrorCatcher({ children, onError }: { children: React.ReactNode; onErro
   }
 }
 
+import { SmartFridgeProvider } from "@/hooks/useSmartFridge";
+import { ShoppingListProvider } from "@/hooks/useShoppingList";
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -73,59 +76,63 @@ const App = () => (
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AuthGate>
         <AppErrorBoundary>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<AuthPage />} />
-            <Route path="/auth/google/callback" element={<GoogleCallback />} />
-            <Route path="/spotify-callback" element={<SpotifyCallback />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/verify-email" element={<VerifyEmail />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/recipes" element={<Recipes />} />
-            <Route path="/fridge" element={<SmartFridge />} />
-            <Route path="/meal-plan" element={<MealPlan />} />
-            <Route path="/shopping" element={<Shopping />} />
-            <Route path="/training" element={<Training />} />
-            <Route path="/trainers" element={<Trainers />} />
-            <Route path="/music" element={<Music />} />
-            <Route path="/articles" element={<Articles />} />
-            <Route path="/ai-coach" element={<AICoach />} />
-            <Route
-              path="/profile"
-              element={
-                <Protected>
-                  <Profile />
-                </Protected>
-              }
-            />
-            <Route
-              path="/statistics"
-              element={
-                <Protected>
-                  <Statistics />
-                </Protected>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <Protected>
-                  <Settings />
-                </Protected>
-              }
-            />
-            <Route
-              path="/admin"
-              element={
-                <Protected>
-                  <AdminPage />
-                </Protected>
-              }
-            />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <SmartFridgeProvider>
+            <ShoppingListProvider>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/auth" element={<AuthPage />} />
+                <Route path="/auth/google/callback" element={<GoogleCallback />} />
+                <Route path="/spotify-callback" element={<SpotifyCallback />} />
+                <Route path="/terms" element={<Terms />} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/verify-email" element={<VerifyEmail />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/recipes" element={<Recipes />} />
+                <Route path="/fridge" element={<SmartFridge />} />
+                <Route path="/meal-plan" element={<MealPlan />} />
+                <Route path="/shopping" element={<Shopping />} />
+                <Route path="/training" element={<Training />} />
+                <Route path="/trainers" element={<Trainers />} />
+                <Route path="/music" element={<Music />} />
+                <Route path="/articles" element={<Articles />} />
+                <Route path="/ai-coach" element={<AICoach />} />
+                <Route
+                  path="/profile"
+                  element={
+                    <Protected>
+                      <Profile />
+                    </Protected>
+                  }
+                />
+                <Route
+                  path="/statistics"
+                  element={
+                    <Protected>
+                      <Statistics />
+                    </Protected>
+                  }
+                />
+                <Route
+                  path="/settings"
+                  element={
+                    <Protected>
+                      <Settings />
+                    </Protected>
+                  }
+                />
+                <Route
+                  path="/admin"
+                  element={
+                    <Protected>
+                      <AdminPage />
+                    </Protected>
+                  }
+                />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </ShoppingListProvider>
+          </SmartFridgeProvider>
         </AppErrorBoundary>
         </AuthGate>
         <GlobalModals />

@@ -256,7 +256,8 @@ export async function generateWorkoutPlan(goals: string[], userLevel: string = '
 export async function generateDetailedRecipe(
   mealType: string,
   targetCalories: number,
-  dietType: string = "всі"
+  dietType: string = "всі",
+  allergies: string = ""
 ): Promise<any> {
   const token = getGithubToken();
   if (!token) {
@@ -267,6 +268,7 @@ export async function generateDetailedRecipe(
   Створи детальний рецепт для прийому їжі: ${mealType}.
   Вимоги:
   - Тип дієти: ${dietType}
+  ${allergies ? `- Алергії/Виключення: ${allergies}` : ''}
   - Цільові калорії: близько ${targetCalories} ккал (похибка +-50 ккал).
   
   Поверни відповідь ТІЛЬКИ у форматі JSON:
@@ -295,24 +297,11 @@ export async function generateDetailedRecipe(
   `;
 
   try {
-    const client = getClient();
-    const response = await client.path("/chat/completions").post({
-      body: {
-        messages: [
-          { role: "system", content: "Ти професійний кухар і дієтолог. Ти відповідаєш ТІЛЬКИ валідним JSON масивом або об'єктом, без маркдауну та зайвого тексту." },
-          { role: "user", content: prompt }
-        ],
-        model: MODEL_NAME,
-        temperature: 0.7,
-        max_tokens: 1500
-      }
+    const response = await retryWithBackoff(async () => {
+      return await generateGroqContent(prompt);
     });
-
-    if (isUnexpected(response)) {
-      throw new Error(response.body?.error?.message || "Помилка AI");
-    }
-
-    let text = response.body.choices[0].message.content;
+    
+    let text = response.text;
     if (text.includes('```json')) {
       text = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     } else if (text.includes('```')) {
@@ -324,9 +313,23 @@ export async function generateDetailedRecipe(
       return JSON.parse(jsonMatch[0]);
     }
     return JSON.parse(text);
-  } catch (error) {
+  } catch (error: any) {
     console.error("AI Recipe Generation error:", error);
-    throw error;
+    
+    const statusCode = error?.status || 
+                      error?.statusCode || 
+                      error?.response?.status || 
+                      error?.response?.statusCode ||
+                      (error?.message?.includes('429') ? 429 : null) ||
+                      (error?.message?.includes('503') ? 503 : null);
+                      
+    if (statusCode === 429) {
+      throw new Error('Наразі занадто багато запитів до AI. Спробуй через кілька секунд.');
+    } else if (statusCode === 503) {
+      throw new Error('AI сервіс тимчасово недоступний. Спробуй через хвилину.');
+    }
+    
+    throw new Error('Не вдалося згенерувати рецепт. Спробуйте ще раз!');
   }
 }
 

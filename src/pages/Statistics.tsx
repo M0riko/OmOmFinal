@@ -89,7 +89,7 @@ export default function Statistics() {
     // 1. Weight Data
     const currentW = currentWeight || user?.weight || 70.0;
     const targetW = user?.targetWeight || (currentW - 5.0);
-    const bmi = currentW / (((user?.height || 170) / 100) ** 2);
+    const bmi = parseFloat((currentW / (((user?.height || 170) / 100) ** 2)).toFixed(1));
     
     // Convert weightEntries to history sorted by date ascending
     const sortedWeightEntries = [...weightEntries].sort((a, b) => a.date.localeCompare(b.date));

@@ -19,6 +19,7 @@ interface MealSectionProps {
   }>;
   onAddMeal: () => void;
   onRemoveMeal: (id: string) => void;
+  onViewRecipe?: (meal: any) => void;
 }
 
 const mealIcons = {
@@ -35,7 +36,7 @@ const mealLabels = {
   snack: "Перекус"
 };
 
-export function MealSection({ mealType, meals, onAddMeal, onRemoveMeal }: MealSectionProps) {
+export function MealSection({ mealType, meals, onAddMeal, onRemoveMeal, onViewRecipe }: MealSectionProps) {
   const Icon = mealIcons[mealType];
   const label = mealLabels[mealType];
 
@@ -93,26 +94,25 @@ export function MealSection({ mealType, meals, onAddMeal, onRemoveMeal }: MealSe
           {meals.map((meal) => (
             <Card
               key={meal.id}
-              className="p-3 sm:p-4 group"
+              className={cn("p-3 sm:p-4 group", onViewRecipe ? "cursor-pointer hover:border-primary/50 transition-colors" : "")}
+              onClick={() => onViewRecipe && onViewRecipe(meal)}
             >
               <div className="flex gap-3 sm:gap-4">
-                {meal.image && (
-                  <img
-                    src={meal.image}
-                    alt={meal.name}
-                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-cover flex-shrink-0"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=100";
-                    }}
-                  />
-                )}
+                <img
+                  src={meal.image || `https://loremflickr.com/150/150/food,dish?random=${encodeURIComponent(meal.name)}`}
+                  alt={meal.name}
+                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-cover flex-shrink-0"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=100";
+                  }}
+                />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <h4 className="font-medium text-sm sm:text-base line-clamp-2">{meal.name}</h4>
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => onRemoveMeal(meal.id)}
+                      onClick={(e) => { e.stopPropagation(); onRemoveMeal(meal.id); }}
                       className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       <X className="w-4 h-4" />

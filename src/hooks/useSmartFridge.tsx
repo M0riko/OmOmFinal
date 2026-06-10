@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, createContext, useContext, ReactNode } from "react";
 import { 
   SmartFridgeProduct, 
   ShoppingListItem, 
@@ -20,7 +20,22 @@ const API_BASE = import.meta.env.PROD
   ? (import.meta.env.VITE_API_BASE_URL && !import.meta.env.VITE_API_BASE_URL.includes('localhost') ? import.meta.env.VITE_API_BASE_URL : '')
   : (import.meta.env.VITE_API_BASE_URL || '');
 
+const SmartFridgeContext = createContext<ReturnType<typeof useSmartFridgeInternal> | undefined>(undefined);
+
+export function SmartFridgeProvider({ children }: { children: ReactNode }) {
+  const value = useSmartFridgeInternal();
+  return <SmartFridgeContext.Provider value={value}>{children}</SmartFridgeContext.Provider>;
+}
+
 export function useSmartFridge() {
+  const context = useContext(SmartFridgeContext);
+  if (context === undefined) {
+    throw new Error('useSmartFridge must be used within a SmartFridgeProvider');
+  }
+  return context;
+}
+
+function useSmartFridgeInternal() {
   const [products, setProducts] = useState<SmartFridgeProduct[]>([]);
   const [shoppingList, setShoppingList] = useState<ShoppingListItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -326,11 +341,136 @@ export function useSmartFridge() {
       );
 
       // Use only fridge products for matching calculation
-      const matches = uniqueRecipes
+      let matches = uniqueRecipes
         .map(recipe => calculateRecipeMatch(recipe, fridgeProductsList))
         .filter(match => match.matchScore > 0)
         .sort((a, b) => b.matchScore - a.matchScore)
         .slice(0, 15); // Increase limit for more options
+
+      // Fallback mock recipes if API fails or returns no results
+      if (matches.length === 0 && fridgeProductsList.length > 0) {
+        console.log("No recipes found from API, using AI to generate recipes based on fridge ingredients");
+        const ingredientNamesStr = fridgeProductsList.slice(0, 3).map(p => p.name.toLowerCase()).join(', ');
+        
+        try {
+          const { getOpenAIService } = await import('@/lib/openai-ai');
+          const aiService = getOpenAIService();
+          const availableIngredients = fridgeProductsList.map(p => p.name);
+          
+          const [aiRecipe1, aiRecipe2] = await Promise.all([
+            aiService.generateRecipe({
+              ingredients: availableIngredients,
+              dietaryPreferences: [],
+              allergies: [],
+              mealType: 'dinner',
+              targetCalories: 450,
+              cookingTime: 30,
+              difficulty: 'easy'
+            }),
+            aiService.generateRecipe({
+              ingredients: availableIngredients,
+              dietaryPreferences: [],
+              allergies: [],
+              mealType: 'lunch',
+              targetCalories: 300,
+              cookingTime: 15,
+              difficulty: 'easy'
+            })
+          ]);
+
+          const mapAIToRecipe = (aiData: any, id: number, image: string) => ({
+            id: id,
+            title: aiData.title,
+            image: image,
+            readyInMinutes: aiData.cookingTime || 30,
+            servings: aiData.servings || 2,
+            summary: aiData.description,
+            extendedIngredients: aiData.ingredients?.map((ing: any) => ({
+              id: Math.random(),
+              name: ing.name,
+              amount: ing.amount,
+              unit: ing.unit,
+              original: `${ing.amount} ${ing.unit} ${ing.name}`
+            })),
+            analyzedInstructions: [
+              {
+                steps: aiData.instructions?.map((step: string, idx: number) => ({
+                  number: idx + 1,
+                  step: step
+                }))
+              }
+            ],
+            nutrition: {
+              nutrients: [
+                { name: "Calories", amount: aiData.nutrition?.calories || 0, unit: "kcal" },
+                { name: "Protein", amount: aiData.nutrition?.protein || 0, unit: "g" },
+                { name: "Fat", amount: aiData.nutrition?.fat || 0, unit: "g" },
+                { name: "Carbohydrates", amount: aiData.nutrition?.carbs || 0, unit: "g" }
+              ]
+            }
+          });
+
+          const aiMock1 = mapAIToRecipe(aiRecipe1, 9991, "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&q=80");
+          const aiMock2 = mapAIToRecipe(aiRecipe2, 9992, "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500&q=80");
+          
+          matches = [aiMock1, aiMock2]
+            .map(recipe => calculateRecipeMatch(recipe as any, fridgeProductsList))
+            .sort((a, b) => b.matchScore - a.matchScore);
+            
+        } catch (error) {
+          console.error("AI Generation failed, using static fallback", error);
+          
+          const mockRecipe1 = {
+            id: 9991,
+            title: `Швидка страва (${fridgeProductsList[0]?.name || 'Мікс'})`,
+            image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&q=80",
+            readyInMinutes: 15,
+            servings: 2,
+            extendedIngredients: fridgeProductsList.slice(0, 3).map(p => ({
+              id: Math.random(),
+              name: p.name,
+              amount: 1,
+              unit: "шт",
+              original: `1 шт ${p.name}`
+            })),
+            nutrition: {
+              nutrients: [
+                { name: "Calories", amount: 350, unit: "kcal" },
+                { name: "Protein", amount: 15, unit: "g" },
+                { name: "Fat", amount: 12, unit: "g" },
+                { name: "Carbohydrates", amount: 45, unit: "g" }
+              ]
+            }
+          };
+
+          const mockRecipe2 = {
+            id: 9992,
+            title: `Експромт (${ingredientNamesStr})`,
+            image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500&q=80",
+            readyInMinutes: 10,
+            servings: 1,
+            extendedIngredients: fridgeProductsList.slice(0, 4).map(p => ({
+              id: Math.random(),
+              name: p.name,
+              amount: 1,
+              unit: "порція",
+              original: `1 порція ${p.name}`
+            })),
+            nutrition: {
+              nutrients: [
+                { name: "Calories", amount: 220, unit: "kcal" },
+                { name: "Protein", amount: 8, unit: "g" },
+                { name: "Fat", amount: 10, unit: "g" },
+                { name: "Carbohydrates", amount: 25, unit: "g" }
+              ]
+            }
+          };
+
+          matches = [mockRecipe1, mockRecipe2]
+            .map(recipe => calculateRecipeMatch(recipe as any, fridgeProductsList))
+            .sort((a, b) => b.matchScore - a.matchScore);
+        }
+      }
 
       return matches;
     } catch (error) {

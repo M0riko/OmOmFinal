@@ -86,7 +86,10 @@ export default function MealPlan() {
       setLoadingRecipeDetails(true);
       toast.info("Генеруємо детальний рецепт...");
       
-      const aiRecipe = await generateDetailedRecipe(meal.name, meal.calories);
+      const userDietType = (user as any)?.preferences?.dietType || 'всі';
+      const userAllergies = (user as any)?.preferences?.excludedFoods?.join(', ') || '';
+      
+      const aiRecipe = await generateDetailedRecipe(meal.name, meal.calories, userDietType, userAllergies);
       
       meal.recipeDetails = {
         title: aiRecipe.title || meal.name,
@@ -178,20 +181,27 @@ export default function MealPlan() {
 
       const { chatWithAICoach } = await import("@/lib/openai-ai");
       
-      const aiPrompt = `Створи список різноманітних страв для плану харчування на тиждень (7 днів). 
-Кожен день має 4 прийоми: сніданок (~${calorieDistribution.breakfast} ккал), обід (~${calorieDistribution.lunch} ккал), вечеря (~${calorieDistribution.dinner} ккал), перекус (~${calorieDistribution.snack} ккал).
-Цілі: ${targetCalories} ккал/день, ${targetProtein}г білків, ${targetFat}г жирів, ${targetCarbs}г вуглеводів.
-Відповідь ТІЛЬКИ у форматі JSON масив з 28 об'єктами (7 днів × 4 прийоми):
+      const userDietType = (user as any)?.preferences?.dietType || '';
+      const userAllergies = (user as any)?.preferences?.excludedFoods?.join(', ') || '';
+      const restrictionsText = `${userDietType ? `Дієта: ${userDietType}. ` : ''}${userAllergies ? `Алергії/Виключення: ${userAllergies}.` : ''}`;
+
+      const aiPrompt = `Створи персоналізований план харчування на ${currentWeekDates.length} днів.
+Кожен день має 4 прийоми їжі з такими цільовими параметрами:
+- Сніданок: ~${calorieDistribution.breakfast} ккал (Б: ${macroDistribution.breakfast.protein}г, Ж: ${macroDistribution.breakfast.fat}г, В: ${macroDistribution.breakfast.carbs}г)
+- Обід: ~${calorieDistribution.lunch} ккал (Б: ${macroDistribution.lunch.protein}г, Ж: ${macroDistribution.lunch.fat}г, В: ${macroDistribution.lunch.carbs}г)
+- Вечеря: ~${calorieDistribution.dinner} ккал (Б: ${macroDistribution.dinner.protein}г, Ж: ${macroDistribution.dinner.fat}г, В: ${macroDistribution.dinner.carbs}г)
+- Перекус: ~${calorieDistribution.snack} ккал (Б: ${macroDistribution.snack.protein}г, Ж: ${macroDistribution.snack.fat}г, В: ${macroDistribution.snack.carbs}г)
+${restrictionsText ? `\nОБМЕЖЕННЯ КОРИСТУВАЧА (ОБОВ'ЯЗКОВО ВРАХУЙ): ${restrictionsText}` : ''}
+
+Відповідь ТІЛЬКИ у форматі JSON масив з ${currentWeekDates.length * 4} об'єктами:
 [
-  {"day": 1, "mealType": "breakfast", "searchTerm": "овсянка з ягодами", "description": "Сніданок"},
-  {"day": 1, "mealType": "lunch", "searchTerm": "куряча грудка з овочами", "description": "Обід"},
-  {"day": 1, "mealType": "dinner", "searchTerm": "лосось з овочами", "description": "Вечеря"},
-  {"day": 1, "mealType": "snack", "searchTerm": "йогурт з горіхами", "description": "Перекус"},
+  {"day": 1, "mealType": "breakfast", "name": "Вівсянка з ягодами та горіхами", "calories": ${calorieDistribution.breakfast}, "protein": ${macroDistribution.breakfast.protein}, "fat": ${macroDistribution.breakfast.fat}, "carbs": ${macroDistribution.breakfast.carbs}},
+  {"day": 1, "mealType": "lunch", "name": "...", "calories": ..., "protein": ..., "fat": ..., "carbs": ...},
   ...
 ]
-Кожна страва має бути різною, без повторень. Використовуй українські назви страв.`;
+Всі назви страв українською мовою. Калорії та макроси мають точно відповідати цілям. Не використовуй сторонній текст, тільки JSON.`;
 
-      let mealSuggestions: Array<{day: number, mealType: string, searchTerm: string, description: string}> = [];
+      let mealSuggestions: Array<{day: number, mealType: string, name: string, calories: number, protein: number, fat: number, carbs: number}> = [];
       
       try {
         const aiResponse = await chatWithAICoach(aiPrompt);
@@ -213,10 +223,17 @@ export default function MealPlan() {
       } catch (error) {
         console.error("AI suggestion failed:", error);
         toast.error("Помилка генерації плану. Спробуйте ще раз.");
+        setLoading(false);
+        return;
+      }
+
+      if (mealSuggestions.length === 0) {
+        toast.error("Не вдалося згенерувати план харчування.");
+        setLoading(false);
+        return;
       }
 
       const newPlan: WeeklyPlan = {};
-      const usedRecipeIds = new Set<number>();
 
       for (let dayIndex = 0; dayIndex < currentWeekDates.length; dayIndex++) {
         const date = currentWeekDates[dayIndex];
@@ -230,62 +247,37 @@ export default function MealPlan() {
         for (const mealType of mealTypes) {
           const suggestion = mealSuggestions.find(
             m => m.day === dayIndex + 1 && m.mealType === mealType.key
-          ) || { searchTerm: "healthy food", description: mealType.label };
+          );
 
-          try {
-            const searchOptions: any = { 
-              number: 10,
-              maxReadyTime: 60
+          if (suggestion) {
+            const meal: MealPlanItem = {
+              id: crypto.randomUUID(),
+              recipeId: Math.floor(Math.random() * 1000000), // Random ID for UI
+              name: suggestion.name,
+              mealType: mealType.key as MealType,
+              calories: calorieDistribution[mealType.key],
+              protein: macroDistribution[mealType.key].protein,
+              fat: macroDistribution[mealType.key].fat,
+              carbs: macroDistribution[mealType.key].carbs,
+              servings: 1,
+              date
             };
-
-            if (mealType.key === "breakfast") {
-              searchOptions.dishType = "breakfast";
-            } else if (mealType.key === "lunch") {
-              searchOptions.dishType = "lunch";
-            } else if (mealType.key === "dinner") {
-              searchOptions.dishType = "dinner";
-            }
-
-            const result = await apiService.searchRecipes(suggestion.searchTerm, searchOptions);
-            
-            const targetCaloriesForMeal = calorieDistribution[mealType.key];
-            const targetMacros = macroDistribution[mealType.key];
-            
-            const suitableRecipes = result.recipes
-              .filter(recipe => {
-                const recipeId = recipe.id;
-                if (usedRecipeIds.has(recipeId)) return false;
-                
-                const recipeCalories = Math.round(
-                  (recipe.nutrition?.nutrients.find((n: any) => n.name === "Calories")?.amount || 300) / recipe.servings
-                );
-                const caloriesDiff = Math.abs(recipeCalories - targetCaloriesForMeal);
-                return caloriesDiff <= targetCaloriesForMeal * 0.3;
-              })
-              .slice(0, 1);
-
-            if (suitableRecipes.length > 0) {
-              const recipe = suitableRecipes[0];
-              usedRecipeIds.add(recipe.id);
-
-              const meal: MealPlanItem = {
-                id: crypto.randomUUID(),
-                recipeId: recipe.id,
-                name: recipe.title,
-                mealType: mealType.key,
-                calories: Math.round((recipe.nutrition?.nutrients.find((n: any) => n.name === "Calories")?.amount || 300) / recipe.servings),
-                protein: Math.round((recipe.nutrition?.nutrients.find((n: any) => n.name === "Protein")?.amount || targetMacros.protein) / recipe.servings),
-                fat: Math.round((recipe.nutrition?.nutrients.find((n: any) => n.name === "Fat")?.amount || targetMacros.fat) / recipe.servings),
-                carbs: Math.round((recipe.nutrition?.nutrients.find((n: any) => n.name === "Carbohydrates")?.amount || targetMacros.carbs) / recipe.servings),
-                servings: 1,
-                date
-              };
-              newPlan[date][mealType.key].push(meal);
-            } else {
-              toast.warning(`Не знайдено підходящих рецептів для ${mealType.label} на ${date}`);
-            }
-          } catch (error) {
-            console.error(`Помилка пошуку рецепту для ${mealType.label}:`, error);
+            newPlan[date][mealType.key].push(meal);
+          } else {
+            // Fallback if AI missed a meal
+            const meal: MealPlanItem = {
+              id: crypto.randomUUID(),
+              recipeId: Math.floor(Math.random() * 1000000),
+              name: `Здорова страва на ${mealType.label.toLowerCase()}`,
+              mealType: mealType.key as MealType,
+              calories: calorieDistribution[mealType.key],
+              protein: macroDistribution[mealType.key].protein,
+              fat: macroDistribution[mealType.key].fat,
+              carbs: macroDistribution[mealType.key].carbs,
+              servings: 1,
+              date
+            };
+            newPlan[date][mealType.key].push(meal);
           }
         }
       }
@@ -529,11 +521,19 @@ export default function MealPlan() {
                             className="p-2 sm:p-3 border border-muted/20 bg-card/50 backdrop-blur-sm hover:border-primary/30 transition-all cursor-pointer"
                           >
                             <div className="flex items-start justify-between gap-2 sm:gap-3">
-                              <div className="flex-1 min-w-0">
-                                <h5 className="font-medium text-sm sm:text-base mb-1.5 sm:mb-2 line-clamp-2">
-                                  {meal.name}
-                                </h5>
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 text-xs">
+                              <div className="flex items-start gap-3 flex-1 min-w-0">
+                                <img 
+                                  src={meal.recipeDetails?.image && meal.recipeDetails.image !== "https://images.unsplash.com/photo-1490818387583-1b5f2223d20d?auto=format&fit=crop&w=800&q=80" 
+                                        ? meal.recipeDetails.image 
+                                        : `https://loremflickr.com/150/150/food,dish?random=${encodeURIComponent(meal.name)}`}
+                                  alt={meal.name}
+                                  className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-md flex-shrink-0"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <h5 className="font-medium text-sm sm:text-base mb-1.5 sm:mb-2 line-clamp-2">
+                                    {meal.name}
+                                  </h5>
+                                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 text-xs">
                                   <div className="flex items-center gap-1">
                                     <span className="text-muted-foreground">Ккал:</span>
                                     <span className="font-medium text-orange-500">{meal.calories}</span>

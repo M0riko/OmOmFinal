@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
 import { useSmartFridge } from './useSmartFridge';
 import { useMealPlanner } from './useMealPlanner';
 import { useAuth } from './useAuth';
@@ -57,7 +57,22 @@ const defaultCategories: ShoppingCategory[] = [
   { id: 'other', name: 'Інше', order: 10, color: 'bg-slate-100 text-slate-800', icon: 'MoreHorizontal' }
 ];
 
+const ShoppingListContext = createContext<ReturnType<typeof useShoppingListInternal> | undefined>(undefined);
+
+export function ShoppingListProvider({ children }: { children: ReactNode }) {
+  const value = useShoppingListInternal();
+  return <ShoppingListContext.Provider value={value}>{children}</ShoppingListContext.Provider>;
+}
+
 export function useShoppingList() {
+  const context = useContext(ShoppingListContext);
+  if (context === undefined) {
+    throw new Error('useShoppingList must be used within a ShoppingListProvider');
+  }
+  return context;
+}
+
+function useShoppingListInternal() {
   const [items, setItems] = useState<ShoppingItem[]>([]);
   const [categories, setCategories] = useState<ShoppingCategory[]>(defaultCategories);
   const [stats, setStats] = useState<ShoppingStats>({
