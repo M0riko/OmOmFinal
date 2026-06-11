@@ -3,7 +3,20 @@ import ModelClient, { isUnexpected } from "@azure-rest/ai-inference";
 import { AzureKeyCredential } from "@azure/core-auth";
 
 const endpoint = "https://models.github.ai/inference";
-const MODEL_NAME = "Llama-3.2-11B-Vision-Instruct";
+const FALLBACK_MODELS = [
+  "Llama-3.3-70B-Instruct",
+  "Meta-Llama-3.1-70B-Instruct",
+  "Llama-3.2-11B-Vision-Instruct",
+  "Meta-Llama-3.1-8B-Instruct",
+  "Mistral-large-2407",
+  "Mistral-Nemo",
+  "Phi-3.5-mini-instruct",
+  "Phi-3.5-MoE-instruct",
+  "gpt-4o-mini",
+  "gpt-4o"
+];
+
+let currentModelIndex = 0;
 
 function getGithubToken() {
   return import.meta.env.VITE_GITHUB_TOKEN || '';
@@ -23,23 +36,48 @@ async function generateAIContent(prompt: string, jsonMode: boolean = false): Pro
   }
 
   const client = getClient();
+  let lastError: any = null;
+  const maxAttempts = Math.min(3, FALLBACK_MODELS.length);
 
-  const response = await client.path("/chat/completions").post({
-    body: {
-      messages: [
-        { role: "system", content: jsonMode ? "You must return valid JSON only." : "" },
-        { role: "user", content: prompt }
-      ],
-      model: MODEL_NAME,
-      response_format: jsonMode ? { type: "json_object" } : undefined
+  for (let i = 0; i < maxAttempts; i++) {
+    const modelToTry = FALLBACK_MODELS[currentModelIndex];
+    try {
+      const response = await client.path("/chat/completions").post({
+        body: {
+          messages: [
+            { role: "system", content: jsonMode ? "You must return valid JSON only." : "" },
+            { role: "user", content: prompt }
+          ],
+          model: modelToTry,
+          response_format: jsonMode ? { type: "json_object" } : undefined
+        }
+      });
+
+      if (isUnexpected(response)) {
+        const err: any = new Error(response.body?.error?.message || "Unexpected response");
+        err.status = parseInt(response.status as any) || (response.body?.error?.code === "429" ? 429 : 500);
+        throw err;
+      }
+
+      return response.body.choices[0].message.content || "";
+    } catch (error: any) {
+      lastError = error;
+      const statusCode = error?.status || 
+                        error?.statusCode || 
+                        error?.response?.status || 
+                        error?.response?.statusCode ||
+                        (error?.message?.includes('429') ? 429 : null);
+                        
+      if (statusCode === 429) {
+        console.warn(`AI Model ${modelToTry} rate limited (429). Switching to next model...`);
+        currentModelIndex = (currentModelIndex + 1) % FALLBACK_MODELS.length;
+      } else {
+        throw error;
+      }
     }
-  });
-
-  if (isUnexpected(response)) {
-    throw response.body.error;
   }
 
-  return response.body.choices[0].message.content || "";
+  throw lastError;
 }
 
 async function generateGroqContent(prompt: string, jsonMode: boolean = false) {
