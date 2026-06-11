@@ -3,9 +3,10 @@ import { toast } from "sonner";
 import { fatSecretApiService, type Food, type Recipe, type FoodProduct } from './fatsecret-api';
 import { translationService } from './translation-service';
 import { customProductsService, CustomProduct } from './custom-products';
+import { openFoodFactsApiService, type OpenFoodFactsProduct } from './openfoodfacts-api';
 
 // Re-export types for compatibility
-export type { Food, Recipe, FoodProduct };
+export type { Food, Recipe, FoodProduct, OpenFoodFactsProduct };
 
 // Enhanced API service with FatSecret Premier integration
 class EnhancedApiService {
@@ -44,10 +45,7 @@ class EnhancedApiService {
           return foods.map(food => ({
             food_id: food.food_id,
             food_name: `${food.food_name} (${query})`, // Show original query
-            calories: 0,
-            protein: 0,
-            fat: 0,
-            carbs: 0
+            ...this.parseFoodDescription(food.food_description)
           }));
         } catch (translationError) {
           console.warn('Auto-translation failed:', translationError);
@@ -59,10 +57,7 @@ class EnhancedApiService {
             return englishFoods.map(food => ({
               food_id: food.food_id,
               food_name: `${food.food_name} (${query})`,
-              calories: 0,
-              protein: 0,
-              fat: 0,
-              carbs: 0
+              ...this.parseFoodDescription(food.food_description)
             }));
           }
         }
@@ -74,10 +69,7 @@ class EnhancedApiService {
       return foods.map(food => ({
         food_id: food.food_id,
         food_name: food.food_name,
-        calories: 0,
-        protein: 0,
-        fat: 0,
-        carbs: 0
+        ...this.parseFoodDescription(food.food_description)
       }));
     } catch (error) {
       console.error('Error searching foods:', error);
@@ -310,6 +302,24 @@ class EnhancedApiService {
   }
 
   // Utility methods
+  private parseFoodDescription(description?: string): { calories: number; protein: number; fat: number; carbs: number } {
+    if (!description) return { calories: 0, protein: 0, fat: 0, carbs: 0 };
+    
+    // Default parsing: "Per 1 serving - Calories: 300kcal | Fat: 13.00g | Carbs: 31.00g | Protein: 15.00g"
+    // Also handling translated: "На 1 порцію - Калорії: 300kcal | Жири: 13.00g | Вуглеводи: 31.00g | Білки: 15.00g"
+    const getMatch = (regexStr: string) => {
+      const match = description.match(new RegExp(regexStr, 'i'));
+      return match ? parseFloat(match[1]) || 0 : 0;
+    };
+
+    return {
+      calories: getMatch('(?:Calories|Калорії):\\s*([\\d.]+)') || getMatch('Calories:\\s*([\\d.]+)kcal'),
+      protein: getMatch('(?:Protein|Білки):\\s*([\\d.]+)') || getMatch('Protein:\\s*([\\d.]+)g'),
+      fat: getMatch('(?:Fat|Жири):\\s*([\\d.]+)') || getMatch('Fat:\\s*([\\d.]+)g'),
+      carbs: getMatch('(?:Carbs|Вуглеводи):\\s*([\\d.]+)') || getMatch('Carbs:\\s*([\\d.]+)g')
+    };
+  }
+
   private isCyrillic(text: string): boolean {
     return /[а-яёіїєґ]/i.test(text);
   }
@@ -484,6 +494,23 @@ class EnhancedApiService {
       console.error('Error searching foods with custom:', error);
       // Fallback to custom products only
       return this.searchCustomProducts(query, maxResults);
+    }
+  }
+
+  // Open Food Facts Integration
+  async searchOpenFoodFacts(query: string, maxResults: number = 10): Promise<OpenFoodFactsProduct[]> {
+    if (!navigator.onLine) {
+      throw new Error('Немає з\'єднання з інтернетом');
+    }
+
+    try {
+      // For Open Food Facts (UA endpoint), we want to search exactly what the user typed
+      // without translating to English, to maximize finding local Ukrainian products.
+      const results = await openFoodFactsApiService.searchProducts(query, maxResults);
+      return results;
+    } catch (error) {
+      console.error('Error searching Open Food Facts:', error);
+      return [];
     }
   }
 }

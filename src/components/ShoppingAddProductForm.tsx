@@ -1,4 +1,4 @@
-import { Plus, Package, Hash, Tag } from "lucide-react";
+import { Plus, Package, Hash, Tag, Search } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ interface ShoppingAddProductFormProps {
   categories: Array<{ id: string; name: string }>;
   suggestions?: string[];
   onSuggestionClick?: (suggestion: string) => void;
+  onSearchDb?: () => void;
 }
 
 export function ShoppingAddProductForm({
@@ -33,7 +34,8 @@ export function ShoppingAddProductForm({
   onAddProduct,
   categories,
   suggestions = [],
-  onSuggestionClick
+  onSuggestionClick,
+  onSearchDb
 }: ShoppingAddProductFormProps) {
   const priorityOptions = [
     { value: "low", label: "Низький", color: "bg-green-500/20 text-green-400 border-green-500/30" },
@@ -46,9 +48,17 @@ export function ShoppingAddProductForm({
   return (
     <Card className="p-6 bg-card/30 backdrop-blur-sm border-2 border-muted/30 shadow-lg">
       <div className="space-y-4">
-        <div className="flex items-center gap-2 mb-4">
-          <Package className="w-5 h-5 text-primary" />
-          <h3 className="text-lg font-semibold text-foreground">Додати товар</h3>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Package className="w-5 h-5 text-primary" />
+            <h3 className="text-lg font-semibold text-foreground">Додати товар</h3>
+          </div>
+          {onSearchDb && (
+            <Button variant="outline" size="sm" onClick={onSearchDb} className="gap-2">
+              <Search className="w-4 h-4" />
+              Знайти в базі
+            </Button>
+          )}
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3">

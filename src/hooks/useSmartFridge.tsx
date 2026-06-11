@@ -104,8 +104,24 @@ function useSmartFridgeInternal() {
 
     setSearchLoading(true);
     try {
-      const results = await apiService.searchFoodsWithNutrition(query, 10);
-      setSearchResults(results);
+      const [fatSecretResults, offResults] = await Promise.all([
+        apiService.searchFoodsWithNutrition(query, 10),
+        apiService.searchOpenFoodFacts(query, 10)
+      ]);
+      
+      const mappedOffResults = offResults.map(off => ({
+        food_id: off.id,
+        food_name: off.brands ? `${off.name} (${off.brands})` : off.name,
+        calories: off.calories,
+        protein: off.protein,
+        fat: off.fat,
+        carbohydrate: off.carbs,
+        is_off: true,
+        image_url: off.image_url
+      }));
+
+      // Interleave results or just put OFF first if we want to promote local products
+      setSearchResults([...mappedOffResults, ...fatSecretResults]);
     } catch (error) {
       console.error("Error searching products:", error);
       toast.error("Помилка пошуку продуктів");

@@ -513,112 +513,54 @@ class FatSecretPremierApiService {
       
       console.log(`🌐 Starting translation of ${foods.length} food names to ${targetLanguage}...`);
       
-      // Extended English-to-Ukrainian dictionary for common food items
-      const enToUkDictionary: Record<string, string> = {
-        // Basic foods
-        'rice': 'рис', 'chicken': 'курятина', 'milk': 'молоко', 'bread': 'хліб', 'egg': 'яйце',
-        'eggs': 'яйця', 'butter': 'масло', 'cheese': 'сир', 'meat': 'м\'ясо', 'fish': 'риба',
-        'apple': 'яблуко', 'apples': 'яблука', 'banana': 'банан', 'bananas': 'банани',
-        'orange': 'апельсин', 'oranges': 'апельсини', 'tomato': 'помідор', 'tomatoes': 'помідори',
-        'potato': 'картопля', 'potatoes': 'картопля', 'onion': 'цибуля', 'onions': 'цибуля',
-        'carrot': 'морква', 'carrots': 'морква', 'cucumber': 'огірок', 'cucumbers': 'огірки',
-        'pepper': 'перець', 'peppers': 'перець', 'salt': 'сіль', 'sugar': 'цукор',
-        'flour': 'борошно', 'oil': 'олія', 'water': 'вода', 'juice': 'сік',
-        
-        // Rice products
-        'yellow rice': 'жовтий рис', 'fried rice': 'смажений рис', 'rice crackers': 'рисові крекери',
-        'crispy rice': 'хрусткий рис', 'puffed rice': 'надутий рис', 'white rice': 'білий рис',
-        'brown rice': 'коричневий рис', 'wild rice': 'дикий рис',
-        
-        // Meat products
-        'beef': 'яловичина', 'pork': 'свинина', 'lamb': 'баранина', 'turkey': 'індичка',
-        'sausage': 'ковбаса', 'bacon': 'бекон', 'ham': 'ветчина',
-        
-        // Dairy
-        'yogurt': 'йогурт', 'sour cream': 'сметана', 'cottage cheese': 'творог',
-        
-        // Grains
-        'buckwheat': 'гречка', 'oats': 'овес', 'wheat': 'пшениця', 'corn': 'кукурудза',
-        'barley': 'ячмінь', 'millet': 'просо',
-        
-        // Vegetables
-        'cabbage': 'капуста', 'broccoli': 'броколі', 'spinach': 'шпинат', 'lettuce': 'салат-латук',
-        'peas': 'горох', 'beans': 'квасоля', 'lentils': 'сочевиця',
-        
-        // Fruits
-        'lemon': 'лимон', 'lemons': 'лимони', 'grapes': 'виноград', 'strawberry': 'полуниця',
-        'strawberries': 'полуниця', 'raspberry': 'малина', 'blueberry': 'чорниця',
-        
-        // Beverages
-        'coffee': 'кава', 'tea': 'чай', 'beer': 'пиво', 'wine': 'вино',
-        
-        // Common food phrases
-        'whole': 'цілий', 'sliced': 'нарізаний', 'chopped': 'порізаний', 'ground': 'м\'ясний фарш',
-        'cooked': 'приготовлений', 'raw': 'сирий', 'fresh': 'свіжий', 'frozen': 'заморожений',
-        'canned': 'консервований', 'organic': 'органічний', 'low fat': 'нежирний',
-      };
-      
-      // Translate food names sequentially with delay to avoid rate limiting
+      // Separate foods that need translation
+      const foodsToTranslate = [];
       const translated = [];
+
       for (let i = 0; i < foods.length; i++) {
         const food = foods[i];
-        
-        // Check if food name is already in Ukrainian
         const isNameUkrainian = targetLanguage === 'uk' && isCyrillic(food.food_name);
         
-        let translatedName = food.food_name;
         if (!isNameUkrainian && food.food_name && food.food_name.trim() !== '') {
-          // First try dictionary lookup
-          const lowerName = food.food_name.toLowerCase().trim();
-          let foundTranslation = false;
-          
-          // Direct match
-          if (enToUkDictionary[lowerName]) {
-            translatedName = enToUkDictionary[lowerName];
-            console.log(`  [${i + 1}/${foods.length}] ✓ Dictionary: "${food.food_name}" → "${translatedName}"`);
-            foundTranslation = true;
-          } else {
-            // Partial match - find first matching key
-            const matchingKey = Object.keys(enToUkDictionary).find(key => 
-              lowerName.includes(key) || key.includes(lowerName)
-            );
-            if (matchingKey) {
-              translatedName = enToUkDictionary[matchingKey];
-              console.log(`  [${i + 1}/${foods.length}] ✓ Dictionary (partial): "${food.food_name}" → "${translatedName}"`);
-              foundTranslation = true;
-            }
-          }
-          
-          // If dictionary didn't work, try online translation
-          if (!foundTranslation) {
-            try {
-              // Add delay between requests to avoid rate limiting (500ms between requests)
-              if (i > 0) {
-                await new Promise(resolve => setTimeout(resolve, 500));
-              }
-              
-              console.log(`  [${i + 1}/${foods.length}] Translating online: "${food.food_name}" → ...`);
-              
-              // Try online translation with translateOnlineOnly for real-time translation
-              const nameTranslation = await translationService.translateOnlineOnly(food.food_name, targetLanguage);
-              translatedName = nameTranslation.translatedText;
-              console.log(`  [${i + 1}/${foods.length}] ✓ Online: "${food.food_name}" → "${translatedName}" (${nameTranslation.provider})`);
-            } catch (error: any) {
-              console.warn(`  [${i + 1}/${foods.length}] ✗ Online translation failed: "${food.food_name}"`, error?.message || error);
-              // Keep original name if all translation attempts fail
-            }
-          }
-        } else {
-          console.log(`  [${i + 1}/${foods.length}] ✓ Already Ukrainian: "${food.food_name}"`);
+          foodsToTranslate.push({ index: i, text: food.food_name });
         }
         
+        // Initialize with original names
         translated.push({
           ...food,
-          food_name: translatedName,
           food_description: food.food_description ? 
             this.translateDescription(food.food_description, targetLanguage) : 
             food.food_description
         });
+      }
+
+      // Batch translate if needed
+      if (foodsToTranslate.length > 0) {
+        try {
+          console.log(`  Batch translating ${foodsToTranslate.length} online...`);
+          // Join with newline which Google Translate preserves
+          const joinedText = foodsToTranslate.map(f => f.text).join('\n');
+          
+          const nameTranslation = await translationService.translateOnlineOnly(joinedText, targetLanguage);
+          
+          if (nameTranslation && nameTranslation.translatedText) {
+            // Split by newline and remove extra whitespace
+            const translatedParts = nameTranslation.translatedText.split('\n').map(t => t.trim());
+            
+            // Map back to original items if counts match
+            if (translatedParts.length === foodsToTranslate.length) {
+              for (let j = 0; j < foodsToTranslate.length; j++) {
+                const originalIndex = foodsToTranslate[j].index;
+                translated[originalIndex].food_name = translatedParts[j] || foodsToTranslate[j].text;
+              }
+              console.log(`  ✓ Batch translation successful (${nameTranslation.provider})`);
+            } else {
+              console.warn(`  ✗ Batch translation count mismatch (got ${translatedParts.length}, expected ${foodsToTranslate.length}). Falling back to original names.`);
+            }
+          }
+        } catch (error: any) {
+          console.warn(`  ✗ Batch online translation failed:`, error?.message || error);
+        }
       }
       
       console.log(`✅ Successfully processed ${translated.length} food names to ${targetLanguage}`);

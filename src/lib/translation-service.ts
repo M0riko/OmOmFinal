@@ -135,16 +135,14 @@ class TranslationService {
   // Google Translate (free, unlimited - web-based)
   private async translateWithGoogle(text: string, sourceLang: string, targetLang: string): Promise<TranslationResult> {
     try {
-      // Google Translate web API endpoint (no API key required, unlimited usage)
+      // Google Translate web API endpoint (no API key required, unlimited usage per IP)
       // Format: https://translate.googleapis.com/translate_a/single?client=gtx&sl=SOURCE&tl=TARGET&dt=t&q=TEXT
       const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
       
       const response = await fetch(url, {
         method: 'GET',
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'application/json',
-          'Referer': 'https://translate.google.com/'
+          'Accept': 'application/json'
         }
       });
       
@@ -155,11 +153,9 @@ class TranslationService {
       const data = await response.json();
       
       // Google Translate returns data in format: [[["translated text", ...], ...], detected_source_lang, ...]
-      // Handle different response formats
       let translatedText = '';
       
       if (data && Array.isArray(data)) {
-        // Most common format: [[["translated text", ...], ...], ...]
         if (data[0] && Array.isArray(data[0])) {
           translatedText = data[0]
             .map((item: any) => {
@@ -173,7 +169,6 @@ class TranslationService {
             .trim();
         }
         
-        // Alternative format: ["translated text", ...]
         if (!translatedText && data[0] && typeof data[0] === 'string') {
           translatedText = data[0].trim();
         }
@@ -258,20 +253,8 @@ class TranslationService {
       };
     }
     
-    // Partial translation for compound words
-    for (const [key, value] of Object.entries(dictionary)) {
-      if (lowerText.includes(key)) {
-        const translated = lowerText.replace(key, value);
-        return {
-          originalText: text,
-          translatedText: translated,
-          sourceLanguage: sourceLang,
-          targetLanguage: targetLang,
-          provider: 'Dictionary (partial)'
-        };
-      }
-    }
-    
+    // Partial translation causes horrible results like "сирний" -> "cheeseний"
+    // We strictly rely on online translators for anything that is not an exact match.
     return null;
   }
 

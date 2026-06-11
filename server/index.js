@@ -26,6 +26,8 @@ app.use('/api/trainers', require('./routes/trainers'));
 app.use('/api/music', require('./routes/music'));
 // app.use('/api/fatsecret', require('./routes/fatsecret'));
 app.use('/api/spotify', require('./routes/spotify'));
+app.use('/api/openfoodfacts', require('./routes/openfoodfacts'));
+app.use('/api/translate', require('./routes/translate'));
 app.use('/api', require('./routes/api'));
 
 // Serve static assets in production if the dist directory exists

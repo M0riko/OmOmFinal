@@ -211,8 +211,21 @@ export function AddProductModal({
                         onClick={() => handleSearchResultSelect(product)}
                       >
                         <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <h4 className="font-medium">{product.food_name}</h4>
+                          <div className="flex-1 flex items-center gap-3">
+                            {product.image_url && (
+                              <div className="w-10 h-10 rounded overflow-hidden bg-muted flex-shrink-0">
+                                <img src={product.image_url} alt="" className="w-full h-full object-cover" />
+                              </div>
+                            )}
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-medium">{product.food_name}</h4>
+                                {product.is_off && (
+                                  <Badge variant="outline" className="text-xs bg-secondary/10 border-secondary/20 text-secondary">
+                                    Магазин
+                                  </Badge>
+                                )}
+                              </div>
                             {product.calories > 0 && (
                               <div className="text-sm text-muted-foreground">
                                 {Math.round(product.calories)} ккал • 
@@ -221,6 +234,7 @@ export function AddProductModal({
                                 В: {Math.round(product.carbohydrate)}г
                               </div>
                             )}
+                            </div>
                           </div>
                           {selectedSearchResult === product && (
                             <Badge variant="default">Обрано</Badge>

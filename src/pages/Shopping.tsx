@@ -12,9 +12,10 @@ import { ShoppingSmartAssistant } from "@/components/ShoppingSmartAssistant";
 import { ShoppingStoreModeView } from "@/components/ShoppingStoreModeView";
 import { AutoAddToShoppingList } from "@/components/AutoAddToShoppingList";
 import { ShoppingStatistics } from "@/components/ShoppingStatistics";
+import { AddProductModal } from "@/components/AddProductModal";
 import { Card } from "@/components/ui/card";
 import { Package } from "lucide-react";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useAchievements } from "@/hooks/useAchievements";
 import { useShoppingList } from "@/hooks/useShoppingList";
 import { toast } from "sonner";
@@ -43,6 +44,11 @@ export default function Shopping() {
   const [showCompleted, setShowCompleted] = useState(false);
   const [activeTab, setActiveTab] = useState<"list" | "auto" | "categories" | "statistics">("list");
   
+  // Search Modal State
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+
   const { earn } = useAchievements();
 
   const priorityColors = {
@@ -93,6 +99,56 @@ export default function Shopping() {
       toast.success(`Додано ${count} товарів до списку покупок!`);
     }
   }
+
+  const handleSearchProducts = useCallback(async (searchQuery: string) => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    setSearchLoading(true);
+    try {
+      const { apiService } = await import("@/lib/api");
+      const [fatSecretResults, offResults] = await Promise.all([
+        apiService.searchFoodsWithNutrition(searchQuery, 10),
+        apiService.searchOpenFoodFacts(searchQuery, 10)
+      ]);
+      
+      const mappedOffResults = offResults.map(off => ({
+        food_id: off.id,
+        food_name: off.brands ? `${off.name} (${off.brands})` : off.name,
+        calories: off.calories,
+        protein: off.protein,
+        fat: off.fat,
+        carbohydrate: off.carbs,
+        is_off: true,
+        image_url: off.image_url
+      }));
+
+      setSearchResults([...mappedOffResults, ...fatSecretResults]);
+    } catch (error) {
+      console.error("Error searching products:", error);
+      toast.error("Помилка пошуку продуктів");
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  }, []);
+
+  const handleAddFromSearch = (product: any, quantityObj: { amount: number; unit: any }) => {
+    addItem({
+      name: product.food_name,
+      quantity: quantityObj.amount,
+      unit: quantityObj.unit,
+      category: "other", // Can be improved with auto-categorization
+      priority: "medium",
+      isAutoAdded: false,
+      source: "manual",
+      estimatedPrice: Math.round(Math.random() * 100 + 10)
+    });
+    
+    toast.success("Товар додано до списку!");
+  };
 
   const handleCardClick = (type: "total" | "completed" | "remaining" | "cost") => {
     switch (type) {
@@ -188,6 +244,7 @@ export default function Shopping() {
               categories={categories}
               suggestions={["Молоко", "Хліб", "Яйця", "Масло", "Сир", "Йогурт"]}
               onSuggestionClick={handleSuggestionClick}
+              onSearchDb={() => setIsSearchModalOpen(true)}
             />
 
             {/* Product List or Empty State */}
@@ -277,6 +334,29 @@ export default function Shopping() {
 
           {/* Tab Content */}
           {getTabContent()}
+
+          {/* Search Modal */}
+          <AddProductModal
+            open={isSearchModalOpen}
+            onOpenChange={setIsSearchModalOpen}
+            onAddProduct={(p) => {
+              addItem({
+                name: p.name || "",
+                quantity: p.quantity?.amount || 1,
+                unit: p.quantity?.unit || "шт",
+                category: p.category || "other",
+                priority: "medium",
+                isAutoAdded: false,
+                source: "manual",
+                estimatedPrice: 0
+              });
+              toast.success("Товар додано до списку!");
+            }}
+            onSearchProducts={handleSearchProducts}
+            searchResults={searchResults}
+            searchLoading={searchLoading}
+            onAddFromSearch={handleAddFromSearch}
+          />
         </main>
         <MobileBottomNav />
       </div>
