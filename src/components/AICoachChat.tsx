@@ -81,7 +81,7 @@ export function AICoachChat({ onClose }: AICoachChatProps) {
         const welcomeMessage: Message = {
           id: "welcome",
           type: "ai",
-          content: `Привіт${user?.name ? `, ${user.name}` : ''}! Я твій AI-Коуч з AmAm.
+          content: `Привіт${user?.name ? `, ${user.name}` : ''}! Я твій AI-Коуч з SLKY.
 
 - Готовий допомогти тобі досягти твоїх цілей у харчуванні та фітнесі
 - Проаналізую твої дані та дам персоналізовані поради

@@ -268,7 +268,7 @@ export default function AuthPage() {
       }
 
       setShowOnboarding(false);
-      toast.success("Профіль налаштовано! Ласкаво просимо в AmAm!");
+      toast.success("Профіль налаштовано! Ласкаво просимо в SLKY!");
       
       // Принудительно перенаправляем на главную страницу
       try { 
@@ -349,7 +349,7 @@ export default function AuthPage() {
     
     console.log("Auth: Onboarding skipped, redirecting to home");
     setShowOnboarding(false);
-    toast.success("Ласкаво просимо в AmAm! Ви можете налаштувати профіль пізніше.");
+    toast.success("Ласкаво просимо в SLKY! Ви можете налаштувати профіль пізніше.");
     
     // Принудительно перенаправляем на главную страницу
     try { 
@@ -411,11 +411,11 @@ export default function AuthPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
-              <img src="/logo.svg" alt="AmAm" className="w-8 h-8 object-contain" />
+              <img src="/logo.svg" alt="SLKY" className="w-8 h-8 object-contain" />
             </div>
             <div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
-                AmAm
+                SLKY
               </h1>
               <p className="text-xs text-muted-foreground">Розумний трекер харчування</p>
             </div>
@@ -443,10 +443,10 @@ export default function AuthPage() {
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
-                      <img src="/logo.svg" alt="AmAm" className="w-10 h-10 object-contain" />
+                      <img src="/logo.svg" alt="SLKY" className="w-10 h-10 object-contain" />
                     </div>
                     <h1 className="text-3xl font-extrabold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
-                      AmAm
+                      SLKY
                     </h1>
                   </div>
                 </div>
@@ -495,7 +495,7 @@ export default function AuthPage() {
               
               <div className="relative z-10 flex items-center justify-center mt-8">
                 <div className="w-32 h-32 bg-gradient-to-br from-primary/20 to-primary/5 rounded-full flex items-center justify-center">
-                  <img src="/logo.svg" alt="AmAm" className="w-20 h-20 opacity-90" />
+                  <img src="/logo.svg" alt="SLKY" className="w-20 h-20 opacity-90" />
                 </div>
               </div>
             </Card>
@@ -506,7 +506,7 @@ export default function AuthPage() {
                 {/* Заголовок з іконкою */}
                 <div className="text-center space-y-2">
                   <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary/80 rounded-2xl flex items-center justify-center mx-auto shadow-lg overflow-hidden">
-                    <img src="/logo.svg" alt="AmAm" className="w-12 h-12 object-contain" />
+                    <img src="/logo.svg" alt="SLKY" className="w-12 h-12 object-contain" />
                   </div>
                   <h1 className="text-2xl font-bold">Ласкаво просимо!</h1>
                   <p className="text-muted-foreground">

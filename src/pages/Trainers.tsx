@@ -532,8 +532,8 @@ export default function TrainersPage() {
                   </h3>
                   <p className="text-muted-foreground max-w-sm mx-auto mb-4 text-sm">
                     {locale === "uk" 
-                      ? "Авторизуйтесь в AmAm, щоб переглядати та планувати тренування з тренерами." 
-                      : "Sign in to your AmAm account to view and book sessions with trainers."}
+                      ? "Авторизуйтесь в SLKY, щоб переглядати та планувати тренування з тренерами." 
+                      : "Sign in to your SLKY account to view and book sessions with trainers."}
                   </p>
                   <Button onClick={() => window.location.href = "/auth"} className="rounded-xl">
                     {locale === "uk" ? "Увійти в акаунт" : "Sign In"}

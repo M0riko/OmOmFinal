@@ -73,7 +73,7 @@ export function DashboardHeader() {
     let updated = false;
     notifications.forEach(notif => {
       if (!notifiedGoals.includes(notif.id) && notif.id !== 'welcome') {
-        notify(notif.title, { body: 'Відкрийте AmAm, щоб побачити деталі!' });
+        notify(notif.title, { body: 'Відкрийте SLKY, щоб побачити деталі!' });
         notifiedGoals.push(notif.id);
         updated = true;
       }

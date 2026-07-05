@@ -479,8 +479,8 @@ export default function MusicPage() {
                   
                   <p className="text-muted-foreground text-sm max-w-md mx-auto mb-6 leading-relaxed">
                     {locale === "uk" 
-                      ? "Слухайте улюблені треки прямо в додатку AmAm. Інтегруйте Spotify, щоб синхронізувати темп музики зі своїм кардіо-тренуванням!"
-                      : "Stream your playlists directly inside the AmAm app. Sync music tempo with your workout heart rate zone!"}
+                      ? "Слухайте улюблені треки прямо в додатку SLKY. Інтегруйте Spotify, щоб синхронізувати темп музики зі своїм кардіо-тренуванням!"
+                      : "Stream your playlists directly inside the SLKY app. Sync music tempo with your workout heart rate zone!"}
                   </p>
                   
                   <Button 

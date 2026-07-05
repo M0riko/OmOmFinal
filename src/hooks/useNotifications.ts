@@ -19,7 +19,7 @@ export function useNotifications() {
     
     if (perm === 'granted') {
       new Notification('Сповіщення увімкнено!', {
-        body: 'Тепер ви будете отримувати реальні сповіщення від AmAm.'
+        body: 'Тепер ви будете отримувати реальні сповіщення від SLKY.'
       });
     }
     
