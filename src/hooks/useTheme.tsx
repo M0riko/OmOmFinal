@@ -2,7 +2,7 @@ import { ThemeProvider as NextThemesProvider, useTheme as useNextTheme } from "n
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   return (
-    <NextThemesProvider attribute="class" defaultTheme="system" enableSystem themes={["light", "dark", "military"]}>
+    <NextThemesProvider attribute="class" defaultTheme="military" enableSystem themes={["light", "dark", "military"]}>
       {children}
     </NextThemesProvider>
   );
