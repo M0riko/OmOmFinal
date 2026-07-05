@@ -24,7 +24,7 @@ export default function Privacy() {
           transition={{ duration: 0.5 }}
           className="prose prose-neutral dark:prose-invert prose-p:leading-relaxed prose-headings:font-semibold"
         >
-          <h1 className="text-3xl font-bold mb-6">Політика конфіденційності OmOm</h1>
+          <h1 className="text-3xl font-bold mb-6">Політика конфіденційності AmAm</h1>
           <p className="text-muted-foreground mb-8">Останнє оновлення: 10 червня 2026</p>
 
           <section className="mb-8">

@@ -9,7 +9,7 @@ export function MobileHeader() {
   const { locale, setLocale } = useI18n();
   return (
     <div className="md:hidden sticky top-0 z-40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 border-b border-border p-4 flex items-center justify-between">
-      <span className="font-bold text-lg text-foreground tracking-tight">OmOm</span>
+      <span className="font-bold text-lg text-foreground tracking-tight">AmAm</span>
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
           {theme === "dark" ? <HugeiconsIcon icon={Sun03Icon} size={20} /> : <HugeiconsIcon icon={Moon02Icon} size={20} />}

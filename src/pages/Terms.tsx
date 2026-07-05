@@ -24,13 +24,13 @@ export default function Terms() {
           transition={{ duration: 0.5 }}
           className="prose prose-neutral dark:prose-invert prose-p:leading-relaxed prose-headings:font-semibold"
         >
-          <h1 className="text-3xl font-bold mb-6">Умови використання OmOm</h1>
+          <h1 className="text-3xl font-bold mb-6">Умови використання AmAm</h1>
           <p className="text-muted-foreground mb-8">Останнє оновлення: 10 червня 2026</p>
 
           <section className="mb-8">
             <h2 className="text-2xl font-semibold mb-4">1. Прийняття умов</h2>
             <p className="mb-4">
-              Використовуючи додаток OmOm (далі - "Додаток"), ви погоджуєтеся з цими Умовами використання. 
+              Використовуючи додаток AmAm (далі - "Додаток"), ви погоджуєтеся з цими Умовами використання. 
               Якщо ви не згодні з цими умовами, будь ласка, не використовуйте наш Додаток.
             </p>
           </section>
@@ -38,7 +38,7 @@ export default function Terms() {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold mb-4">2. Опис сервісу</h2>
             <p className="mb-4">
-              OmOm - це платформа для відстеження харчування, активності та води, а також для отримання консультацій від віртуальних тренерів. 
+              AmAm - це платформа для відстеження харчування, активності та води, а також для отримання консультацій від віртуальних тренерів. 
               Додаток надається "як є", і ми не гарантуємо, що він буде безперебійно працювати без помилок.
             </p>
           </section>
@@ -55,7 +55,7 @@ export default function Terms() {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold mb-4">4. Медична інформація</h2>
             <p className="mb-4">
-              Додаток OmOm не є медичним сервісом. Всі поради від віртуальних тренерів та розрахунки калорій мають рекомендаційний характер. 
+              Додаток AmAm не є медичним сервісом. Всі поради від віртуальних тренерів та розрахунки калорій мають рекомендаційний характер. 
               Перед початком будь-якої дієти або програми тренувань проконсультуйтеся з лікарем.
             </p>
           </section>

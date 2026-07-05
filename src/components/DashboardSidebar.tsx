@@ -50,9 +50,9 @@ export function DashboardSidebar() {
       <div className="p-6">
         <div className="flex items-center gap-3 mb-10">
           <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center">
-            <span className="text-primary font-bold text-lg">O</span>
+            <span className="text-primary font-bold text-lg">A</span>
           </div>
-          <span className="font-bold text-xl text-foreground tracking-tight">OmOm</span>
+          <span className="font-bold text-xl text-foreground tracking-tight">AmAm</span>
         </div>
 
         <nav className="space-y-1">

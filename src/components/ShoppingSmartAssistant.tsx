@@ -48,7 +48,7 @@ export function ShoppingSmartAssistant({
     {
       type: "auto",
       title: "Розумне автододавання",
-      description: "Дозвольте OmOm автоматично додавати товари на основі ваших звичок",
+      description: "Дозвольте AmAm автоматично додавати товари на основі ваших звичок",
       icon: TrendingUp,
       color: "from-purple-500 to-pink-500",
       bgColor: "from-purple-500/10 to-pink-500/10",

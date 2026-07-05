@@ -100,7 +100,7 @@ export function PremiumCheckoutModal({ open, onOpenChange }: PremiumCheckoutModa
                 <Check className="w-10 h-10 text-background stroke-[3]" />
               </motion.div>
               <h2 className="text-2xl font-black text-foreground tracking-tight bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-500 bg-clip-text text-transparent">
-                {locale === "uk" ? "ВІТАЄМО В OMOM PREMIUM!" : "WELCOME TO OMOM PREMIUM!"}
+                {locale === "uk" ? "ВІТАЄМО В AMAM PREMIUM!" : "WELCOME TO AMAM PREMIUM!"}
               </h2>
               <p className="text-sm text-muted-foreground mt-2 max-w-xs">
                 {locale === "uk" 
@@ -120,7 +120,7 @@ export function PremiumCheckoutModal({ open, onOpenChange }: PremiumCheckoutModa
           <DialogHeader className="text-left relative z-10">
             <DialogTitle className="text-2xl font-black flex items-center gap-2 tracking-tight bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
               <Sparkles className="w-6 h-6 text-purple-400 fill-purple-400/20 animate-pulse" />
-              OmOm Premium Upgrade
+              AmAm Premium Upgrade
             </DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground font-medium mt-1">
               {locale === "uk" 
@@ -138,7 +138,7 @@ export function PremiumCheckoutModal({ open, onOpenChange }: PremiumCheckoutModa
             
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-[10px] text-purple-200/70 font-bold uppercase tracking-widest">OmOm Club Card</p>
+                <p className="text-[10px] text-purple-200/70 font-bold uppercase tracking-widest">AmAm Club Card</p>
                 <div className="w-10 h-7 rounded bg-amber-400/90 mt-2 flex items-center justify-center overflow-hidden border border-amber-300/40">
                   <div className="w-full h-0.5 bg-neutral-800/20 my-0.5"></div>
                 </div>

@@ -48,11 +48,11 @@ const sendVerificationEmail = async (email, token) => {
     const verificationUrl = `${frontendUrl}/verify-email?token=${token}`;
     
     let info = await t.sendMail({
-      from: '"OMOM Fitness" <noreply@omomfitness.app>',
+      from: '"AMAM Fitness" <noreply@omomfitness.app>',
       to: email,
       subject: "Підтвердження Email адреси",
       html: `
-        <h1>Ласкаво просимо до OMOM!</h1>
+        <h1>Ласкаво просимо до AMAM!</h1>
         <p>Дякуємо за реєстрацію. Будь ласка, підтвердіть свою email адресу, перейшовши за посиланням нижче:</p>
         <a href="${verificationUrl}">Підтвердити Email</a>
         <p>Або скопіюйте це посилання у ваш браузер:</p>
@@ -76,7 +76,7 @@ const sendPasswordResetEmail = async (email, token) => {
     const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
     
     let info = await t.sendMail({
-      from: '"OMOM Fitness" <noreply@omomfitness.app>',
+      from: '"AMAM Fitness" <noreply@omomfitness.app>',
       to: email,
       subject: "Відновлення паролю",
       html: `
