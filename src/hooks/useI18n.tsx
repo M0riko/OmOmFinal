@@ -34,6 +34,7 @@ const uk: Dict = {
   aiAnalytics: "AI-аналітика",
   aiWeeklySummary: "AI-аналіз тижня",
   aiNotifications: "AI-сповіщення",
+  monitoring: "Моніторинг стану користувача",
   
   // Додаткові переклади
   loading: "Завантаження...",
@@ -238,6 +239,7 @@ const en: Dict = {
   aiAnalytics: "AI Analytics",
   aiWeeklySummary: "AI Weekly Summary",
   aiNotifications: "AI Notifications",
+  monitoring: "User Condition Monitoring",
   
   // Додаткові переклади
   loading: "Loading...",

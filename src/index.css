@@ -127,6 +127,61 @@
     --shadow-elevated: 0 4px 16px hsla(0 0% 0% / 0.35);
     --shadow-glow: 0 0 12px hsla(168 35% 48% / 0.15);
   }
+
+  .military {
+    --background: 90 10% 12%;
+    --foreground: 60 15% 90%;
+
+    --card: 90 10% 16%;
+    --card-foreground: 60 15% 90%;
+
+    --popover: 90 10% 16%;
+    --popover-foreground: 60 15% 90%;
+
+    --primary: 85 45% 38%;
+    --primary-foreground: 60 15% 96%;
+
+    --secondary: 40 20% 45%;
+    --secondary-foreground: 60 15% 96%;
+
+    --muted: 90 8% 22%;
+    --muted-foreground: 60 10% 65%;
+
+    --accent: 85 30% 22%;
+    --accent-foreground: 60 15% 90%;
+
+    --destructive: 0 60% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 90 10% 24%;
+    --input: 90 10% 24%;
+    --ring: 85 45% 38%;
+
+    --sidebar-background: 90 12% 14%;
+    --sidebar-foreground: 60 15% 90%;
+    --sidebar-primary: 85 45% 38%;
+    --sidebar-primary-foreground: 60 15% 96%;
+    --sidebar-accent: 85 30% 20%;
+    --sidebar-accent-foreground: 60 15% 90%;
+    --sidebar-border: 90 10% 22%;
+    --sidebar-ring: 85 45% 38%;
+
+    --success: 120 30% 40%;
+    --success-foreground: 0 0% 100%;
+    --warning: 45 60% 45%;
+    --warning-foreground: 0 0% 100%;
+    --info: 200 40% 45%;
+    --info-foreground: 0 0% 100%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(85 45% 38%), hsl(100 30% 32%));
+    --gradient-success: linear-gradient(135deg, hsl(120 30% 40%), hsl(95 35% 35%));
+    --gradient-energy: linear-gradient(135deg, hsl(40 20% 45%), hsl(50 15% 35%));
+    --gradient-subtle: linear-gradient(180deg, hsl(90 10% 12%), hsl(90 10% 16%));
+
+    --shadow-card: 0 2px 8px hsla(0 0% 0% / 0.35);
+    --shadow-elevated: 0 4px 16px hsla(0 0% 0% / 0.45);
+    --shadow-glow: 0 0 12px hsla(85 45% 38% / 0.2);
+  }
 }
 
 @layer base {

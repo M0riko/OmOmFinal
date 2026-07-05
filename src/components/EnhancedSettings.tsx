@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { useTheme } from "@/hooks/useTheme";
 
 interface EnhancedSettingsProps {
   user: any;
@@ -52,7 +53,14 @@ export function EnhancedSettings({ user, onUpdateUser, onLogout }: EnhancedSetti
   });
   
   // Общие настройки
-  const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
+  const { theme: activeTheme, setTheme: setActiveTheme } = useTheme();
+  const [theme, setTheme] = useState<"light" | "dark" | "military" | "system">("system");
+  
+  useEffect(() => {
+    if (activeTheme) {
+      setTheme(activeTheme as any);
+    }
+  }, [activeTheme]);
   const [language, setLanguage] = useState("uk");
   const [units, setUnits] = useState({
     weight: "kg",
@@ -342,7 +350,10 @@ export function EnhancedSettings({ user, onUpdateUser, onLogout }: EnhancedSetti
             <div className="space-y-4">
               <div>
                 <Label className="text-sm font-medium">Тема</Label>
-                <Select value={theme} onValueChange={(value: any) => setTheme(value)}>
+                <Select value={theme} onValueChange={(value: any) => {
+                  setTheme(value);
+                  setActiveTheme(value);
+                }}>
                   <SelectTrigger className="mt-1">
                     <SelectValue />
                   </SelectTrigger>
@@ -357,6 +368,12 @@ export function EnhancedSettings({ user, onUpdateUser, onLogout }: EnhancedSetti
                       <div className="flex items-center gap-2">
                         <Moon className="w-4 h-4" />
                         Темна
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="military">
+                      <div className="flex items-center gap-2">
+                        <Shield className="w-4 h-4" />
+                        Військова (Military)
                       </div>
                     </SelectItem>
                     <SelectItem value="system">

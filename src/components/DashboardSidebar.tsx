@@ -13,6 +13,8 @@ import {
   Moon02Icon,
   UserGroupIcon,
   MusicNote01Icon,
+  Activity01Icon,
+  Shield01Icon,
 } from '@hugeicons/core-free-icons';
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -36,6 +38,7 @@ export const navItems = [
   { icon: BookOpen01Icon, label: "articles", path: "/articles" },
   { icon: AiBrain01Icon, label: "aiCoach", path: "/ai-coach" },
   { icon: UserIcon, label: "profile", path: "/profile" },
+  { icon: Activity01Icon, label: "monitoring", path: "http://pwr.inf.ua/mhealth/", external: true },
 ] as const;
 
 
@@ -56,23 +59,46 @@ export function DashboardSidebar() {
         </div>
 
         <nav className="space-y-1">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
-                  isActive
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent/50"
-                )
-              }
-            >
-              <HugeiconsIcon icon={item.icon} size={22} strokeWidth={1.5} />
-              <span>{t(item.label as keyof typeof t)}</span>
-            </NavLink>
-          ))}
+          {navItems.map((item) => {
+            const isExternal = 'external' in item && item.external;
+            const content = (
+              <>
+                <HugeiconsIcon icon={item.icon} size={22} strokeWidth={1.5} />
+                <span>{t(item.label as any)}</span>
+              </>
+            );
+
+            if (isExternal) {
+              return (
+                <a
+                  key={item.path}
+                  href={item.path}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-sidebar-foreground hover:bg-sidebar-accent/50"
+                >
+                  {content}
+                </a>
+              );
+            }
+
+            return (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
+                    isActive
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                  )
+                }
+              >
+                {content}
+              </NavLink>
+            );
+          })}
           {user?.role === 'admin' && (
             <NavLink
               to="/admin"
@@ -96,8 +122,18 @@ export function DashboardSidebar() {
 
       <div className="mt-auto p-6 space-y-3">
         <div className="flex items-center justify-between px-4">
-          <Button variant="ghost" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-            {theme === "dark" ? <HugeiconsIcon icon={Sun03Icon} size={18} /> : <HugeiconsIcon icon={Moon02Icon} size={18} />}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => {
+              if (theme === "light") setTheme("dark");
+              else if (theme === "dark") setTheme("military");
+              else setTheme("light");
+            }}
+          >
+            {theme === "dark" && <HugeiconsIcon icon={Shield01Icon} size={18} />}
+            {theme === "military" && <HugeiconsIcon icon={Sun03Icon} size={18} />}
+            {theme !== "dark" && theme !== "military" && <HugeiconsIcon icon={Moon02Icon} size={18} />}
           </Button>
           <Button variant="outline" size="sm" onClick={() => setLocale(locale === "uk" ? "en" : "uk")}>{locale.toUpperCase()}</Button>
         </div>

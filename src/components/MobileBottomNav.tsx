@@ -14,7 +14,7 @@ export function MobileBottomNav() {
   const { user } = useAuth();
   const [sheetOpen, setSheetOpen] = useState(false);
   const mainPaths = ["/", "/recipes", "/meal-plan", "/fridge", "/profile"] as const;
-  const extraPaths = ["/shopping", "/training", "/trainers", "/music", "/articles", "/ai-coach"] as const;
+  const extraPaths = ["/shopping", "/training", "/trainers", "/music", "/articles", "/ai-coach", "http://pwr.inf.ua/mhealth/"] as const;
   const isExtrasActive = extraPaths.includes(location.pathname as any);
   
   const handleNavClick = (path: string) => {
@@ -108,6 +108,29 @@ export function MobileBottomNav() {
                   .filter((i) => extraPaths.includes(i.path as any))
                   .map((i) => {
                     const isActive = location.pathname === i.path;
+                    const isExternal = 'external' in i && i.external;
+
+                    if (isExternal) {
+                      return (
+                        <a
+                          key={i.path}
+                          href={i.path}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex flex-col items-center justify-center gap-3 p-5 rounded-2xl transition-all duration-200 min-h-[90px] bg-muted/50 text-foreground border border-border hover:bg-muted active:scale-95"
+                          aria-label={t(i.label)}
+                          onClick={() => setSheetOpen(false)}
+                        >
+                          <HugeiconsIcon 
+                            icon={i.icon}
+                            size={28}
+                            strokeWidth={1.5}
+                          />
+                          <span className="text-xs font-medium text-center">{t(i.label)}</span>
+                        </a>
+                      );
+                    }
+
                     return (
                       <button
                         key={i.path}

@@ -4,7 +4,8 @@ import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { useAuth } from "@/hooks/useAuth";
 import { useWeight } from "@/hooks/useWeight";
 import { useNotifications } from "@/hooks/useNotifications";
-import { useState } from "react";
+import { useTheme } from "@/hooks/useTheme";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   ArrowLeft,
@@ -37,6 +38,7 @@ export default function Settings() {
   const { user, updateUser, logout } = useAuth();
   const { addWeight } = useWeight();
   const { permission, requestPermission } = useNotifications();
+  const { theme: activeTheme, setTheme: setActiveTheme } = useTheme();
   const navigate = useNavigate();
   const { t, locale, setLocale } = useI18n();
   const [isEditing, setIsEditing] = useState(false);
@@ -51,7 +53,7 @@ export default function Settings() {
     weight: (user as any)?.weight || '',
     targetWeight: (user as any)?.targetWeight || '',
     activityLevel: (user as any)?.activityLevel || 'moderate',
-    theme: 'system',
+    theme: activeTheme || 'system',
     language: locale || 'uk',
     notifications: {
       workout: true,
@@ -67,11 +69,20 @@ export default function Settings() {
     }
   });
 
+  useEffect(() => {
+    if (activeTheme) {
+      setFormData(prev => ({ ...prev, theme: activeTheme }));
+    }
+  }, [activeTheme]);
+
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
+    if (field === 'theme') {
+      setActiveTheme(value);
+    }
   };
 
   const handleNestedInputChange = (parent: string, field: string, value: any) => {
@@ -450,6 +461,7 @@ export default function Settings() {
                     <SelectContent>
                       <SelectItem value="light">Світла</SelectItem>
                       <SelectItem value="dark">Темна</SelectItem>
+                      <SelectItem value="military">Військова (Military)</SelectItem>
                       <SelectItem value="system">Системна</SelectItem>
                     </SelectContent>
                   </Select>
