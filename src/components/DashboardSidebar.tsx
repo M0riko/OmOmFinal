@@ -52,9 +52,6 @@ export function DashboardSidebar() {
     <aside className="hidden md:flex w-64 bg-sidebar border-r border-sidebar-border h-screen sticky top-0 flex-col overflow-y-auto overflow-x-hidden custom-scrollbar">
       <div className="p-6">
         <div className="flex items-center gap-3 mb-10">
-          <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center">
-            <span className="text-primary font-bold text-lg">S</span>
-          </div>
           <span className="font-bold text-xl text-foreground tracking-tight">SLKY</span>
         </div>
 
