@@ -29,6 +29,7 @@ export default function AuthPage() {
   const [showPass, setShowPass] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
+  const [activeTab, setActiveTab] = useState("register");
 
   // Проверяем, нужно ли показать онбординг для уже авторизованного пользователя
   useEffect(() => {
@@ -73,9 +74,7 @@ export default function AuthPage() {
           action: {
             label: "Реєстрація",
             onClick: () => {
-              // Переключиться на вкладку регистрации
-              const registerTab = document.querySelector('[value="register"]') as HTMLElement;
-              registerTab?.click();
+              setActiveTab("register");
             }
           }
         });
@@ -108,9 +107,7 @@ export default function AuthPage() {
           action: {
             label: "Вхід",
             onClick: () => {
-              // Переключиться на вкладку входа
-              const loginTab = document.querySelector('[value="login"]') as HTMLElement;
-              loginTab?.click();
+              setActiveTab("login");
             }
           }
         });
@@ -410,9 +407,11 @@ export default function AuthPage() {
       <div className="lg:hidden p-4 border-b bg-gradient-to-r from-background to-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
-              <img src="/logo.svg" alt="SLKY" className="w-8 h-8 object-contain" />
-            </div>
+            {activeTab !== "register" && (
+              <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
+                <img src="/logo.svg" alt="SLKY" className="w-8 h-8 object-contain" />
+              </div>
+            )}
             <div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
                 SLKY
@@ -442,9 +441,11 @@ export default function AuthPage() {
               <div className="relative z-10">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
-                      <img src="/logo.svg" alt="SLKY" className="w-10 h-10 object-contain" />
-                    </div>
+                    {activeTab !== "register" && (
+                      <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
+                        <img src="/logo.svg" alt="SLKY" className="w-10 h-10 object-contain" />
+                      </div>
+                    )}
                     <h1 className="text-3xl font-extrabold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
                       SLKY
                     </h1>
@@ -493,11 +494,13 @@ export default function AuthPage() {
                 </div>
               </div>
               
-              <div className="relative z-10 flex items-center justify-center mt-8">
-                <div className="w-32 h-32 bg-gradient-to-br from-primary/20 to-primary/5 rounded-full flex items-center justify-center">
-                  <img src="/logo.svg" alt="SLKY" className="w-20 h-20 opacity-90" />
+              {activeTab !== "register" && (
+                <div className="relative z-10 flex items-center justify-center mt-8">
+                  <div className="w-32 h-32 bg-gradient-to-br from-primary/20 to-primary/5 rounded-full flex items-center justify-center">
+                    <img src="/logo.svg" alt="SLKY" className="w-20 h-20 opacity-90" />
+                  </div>
                 </div>
-              </div>
+              )}
             </Card>
 
             {/* Right auth panel */}
@@ -505,16 +508,22 @@ export default function AuthPage() {
               <div className="space-y-6">
                 {/* Заголовок з іконкою */}
                 <div className="text-center space-y-2">
-                  <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary/80 rounded-2xl flex items-center justify-center mx-auto shadow-lg overflow-hidden">
-                    <img src="/logo.svg" alt="SLKY" className="w-12 h-12 object-contain" />
-                  </div>
-                  <h1 className="text-2xl font-bold">Ласкаво просимо!</h1>
+                  {activeTab !== "register" && (
+                    <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary/80 rounded-2xl flex items-center justify-center mx-auto shadow-lg overflow-hidden">
+                      <img src="/logo.svg" alt="SLKY" className="w-12 h-12 object-contain" />
+                    </div>
+                  )}
+                  <h1 className="text-2xl font-bold">
+                    {activeTab === "register" ? "Реєстрація" : "Ласкаво просимо!"}
+                  </h1>
                   <p className="text-muted-foreground">
-                    Створи акаунт та розпочни свій шлях до здорового життя
+                    {activeTab === "register" 
+                      ? "Створи акаунт та розпочни свій шлях до здорового життя"
+                      : "Увійди у свій акаунт, щоб продовжити"}
                   </p>
                 </div>
 
-                <Tabs defaultValue="register" className="w-full">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                   <TabsList className="w-full grid grid-cols-2 h-12 bg-muted/50 p-1">
                     <TabsTrigger 
                       value="login" 
